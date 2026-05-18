@@ -125,7 +125,7 @@ End-to-end verification against a live Gateway remains deferred (`quant-api-gate
 - [x] `pnpm typecheck` zero errors; `pnpm lint` zero findings; `pnpm format` no drift; `pnpm test:coverage` 118/118 passing with 99.84/93.96/98/99.84; `pnpm build` succeeds (2026-05-18).
 - [x] `pnpm build` shows Recharts as separate chunks (`CartesianChart-*.js` 101.50 KB gzip is the bulk of Recharts, only loaded on demand); main bundle 99.75 KB gzip (2026-05-18).
 - [x] No `any` (no `// biome-ignore` needed); no `console.log`; charts consume `EquityPoint` from `@/types/gateway` (no hand-written domain interfaces) (2026-05-18).
-- [x] Plan doc + ROADMAP updated (2026-05-18); PR `feature/phase-5-equity-curve-charts` → `main` pending push.
+- [x] Plan doc + ROADMAP updated (2026-05-18); PR `feature/phase-5-equity-curve-charts` → `main` opened — [#5](https://github.com/lumduan/quant-dashboard/pull/5) (2026-05-18).
 
 ---
 
