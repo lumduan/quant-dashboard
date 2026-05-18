@@ -371,7 +371,7 @@ Remaining:
 
 #### 4.1 Formatters
 
-- `[ ]` Create `src/utils/formatters.ts`. Hoist `Intl` instances to module scope (Vercel `js-cache-function-results` — `Intl` constructors are expensive):
+- `[x]` Create `src/utils/formatters.ts`. Hoist `Intl` instances to module scope (Vercel `js-cache-function-results` — `Intl` constructors are expensive) — done 2026-05-18:
   ```typescript
   const THB_FORMATTER = new Intl.NumberFormat('th-TH', {
     style: 'currency',
@@ -396,22 +396,22 @@ Remaining:
   export const trendColor = (v: number): string =>
     v > 0 ? 'text-green-400' : v < 0 ? 'text-red-400' : 'text-gray-400'
   ```
-- `[ ]` Co-locate `formatters.test.ts` covering positive, negative, zero, and edge cases (very large THB, fractional %).
+- `[x]` Co-locate `formatters.test.ts` covering positive, negative, zero, and edge cases (very large THB, fractional %) — done 2026-05-18.
 
-**Acceptance criteria:** `formatTHB(1_000_000)` → "฿1,000,000". `formatPercent(0.0123)` → "+1.23%". `formatPercent(-0.0123)` → "-1.23%". Intl instances are module-scoped.
+**Acceptance criteria:** `formatTHB(1_000_000)` → "฿1,000,000" (or "THB 1,000,000" on builds without a Thai symbol). `formatPercent(0.0123)` → "+1.23%". `formatPercent(-0.0123)` → "-1.23%". Intl instances are module-scoped.
 
 #### 4.2 MetricCard, PortfolioSummary & AllocationBar
 
-- `[ ]` Create `src/components/widgets/MetricCard.tsx` — pure presentation; props marked `readonly` per [coding-standards.md §TypeScript](../../.claude/knowledge/coding-standards.md). No internal state. **Do not** define this component inside another component (Vercel `rerender-no-inline-components`).
-- `[ ]` Create `src/components/widgets/PortfolioSummary.tsx` — 4-up grid:
+- `[x]` Create `src/components/widgets/MetricCard.tsx` — pure presentation; props marked `readonly` per [coding-standards.md §TypeScript](../../.claude/knowledge/coding-standards.md). No internal state. **Do not** define this component inside another component (Vercel `rerender-no-inline-components`). Done 2026-05-18.
+- `[x]` Create `src/components/widgets/PortfolioSummary.tsx` — 4-up grid (done 2026-05-18):
   - Portfolio value (`formatTHB`), today's return (`formatPercent`, colored), Max Drawdown (`formatPercent`), active strategy count.
   - Subscribes to `useOverallPerformance()` and renders skeletons while loading.
-- `[ ]` Create `src/components/widgets/AllocationBar.tsx`:
+- `[x]` Create `src/components/widgets/AllocationBar.tsx` — done 2026-05-18:
   - Stacked bar; each segment is one strategy weight from `data.allocation: Record<string, number>`.
-  - Colors come from the shared palette in `src/utils/palette.ts` so the bar visually matches the charts.
-- `[ ]` Co-locate tests per widget using `getByRole` / `getByText` ([coding-standards.md §Tests](../../.claude/knowledge/coding-standards.md)).
+  - Colors come from the shared palette in `src/utils/palette.ts` (pulled forward from Phase 5 since `AllocationBar` needs it) so the bar visually matches the charts that ship in Phase 5.
+- `[x]` Co-locate tests per widget using `getByRole` / `getByText` ([coding-standards.md §Tests](../../.claude/knowledge/coding-standards.md)). Done 2026-05-18.
 
-**Acceptance criteria:** Widget renders all 4 metrics + AllocationBar from real Gateway data. Negative values red, positive green. Each widget ≥80% coverage.
+**Acceptance criteria:** Widget renders all 4 metrics + AllocationBar from real Gateway data. Negative values red, positive green. Each widget ≥80% coverage. ✅ **Phase 4 complete 2026-05-18 — see [`phase_4_portfolio_summary_widget.md`](./phase_4_portfolio_summary_widget.md).**
 
 ---
 
@@ -421,7 +421,7 @@ Remaining:
 
 This is where Vercel `bundle-dynamic-imports` matters most. All chart components are default exports loaded via `React.lazy`.
 
-- `[ ]` Create `src/utils/palette.ts`:
+- `[x]` ~~Create `src/utils/palette.ts`~~ — pulled forward into Phase 4 (`AllocationBar` needed it). `STRATEGY_COLORS` already exported `as const`:
   ```typescript
   export const STRATEGY_COLORS = [
     '#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6',
@@ -857,14 +857,15 @@ Phase 1 (Project Bootstrap)
 
 ## Current Status
 
-- **Current phase:** Phase 4 — Portfolio Summary Widget.
+- **Current phase:** Phase 5 — Equity Curve Charts.
 - **Completed:**
   - Generic scaffold — Vite 6, React 19, TypeScript 5 strict, Biome 1.9, Vitest 3, Husky + lint-staged, Docker multi-stage, Nginx with SPA fallback + security headers, GitHub Actions CI / docker-publish / security-audit, `.claude/` knowledge base, Zod, `pnpm@9.15.0` pinned via Corepack.
   - **Phase 1 — Project Bootstrap (2026-05-18):** domain deps (`@tanstack/react-query`, `react-router-dom`, `recharts`, Tailwind v4), `vite.config.ts` `/api` proxy via `loadEnv`, Zod-validated `src/config.ts` (`loadConfig` / `getConfig` / `ConfigError`), `.env.example` activated, README rebranded, feature folder skeleton via `.gitkeep`, package + index.html + App.tsx rebranded. Quality gate green: 100/90/100/100 coverage; build 195 KB JS / 61 KB gzip. See [`phase_1_bootstrap.md`](./phase_1_bootstrap.md).
   - **Phase 2 — Zod Schemas, Fetch Client & TanStack Query (2026-05-18):** 5 Zod schemas mirroring Gateway Pydantic contracts (`src/api/schemas.ts`); inferred types only in `src/types/gateway.ts` (zero hand-written interfaces); `apiFetch<T>` + `ApiError` in `src/api/client.ts` (relative paths via dev proxy; `safeParse` validates every response); 6 typed query functions covering all 11 Gateway endpoints (`src/api/queries.ts`); 6 TanStack Query hooks (`src/hooks/useGateway.ts`); MSW v2 wired (`src/test/mocks/{handlers,server}.ts` + lifecycle in `src/test-setup.ts`); `QueryClientProvider` in `src/main.tsx` (`staleTime: 4*60s`, `gcTime: 10*60s`, no refetch-on-focus, `retry: 1`). Quality gate green: 38/38 tests; 100% stmts / 98% branch / 100% funcs / 100% lines across `src/api/*` and `src/hooks/*`; build 219.86 KB JS / 68.30 KB gzip. See [`phase_2_zod_schemas_fetch_client.md`](./phase_2_zod_schemas_fetch_client.md).
   - **Phase 3 — Layout & Navigation (2026-05-18):** `BrowserRouter` outermost wrapping `QueryClientProvider`; `AppLayout` (`src/components/layout/AppLayout.tsx`) wraps `{children}` in `<Suspense fallback={<LoadingState />}>` for Phase 5 lazy chart streaming; `Sidebar` (`src/components/layout/Sidebar.tsx`) auto-generates NavLinks from `useStrategies()` (filtered by `active: true`) with a home link and a skeleton while pending; `Header` (`src/components/layout/Header.tsx`) shows 🟢/🟡/🔴 from `useOverallPerformance().status` and applies `useDeferredValue` to the formatted `HH:MM:SS` timestamp; page stubs `DashboardPage` + `StrategyPage` (named exports); shared `renderWithProviders` test helper in `src/test/render.tsx` (QueryClient + MemoryRouter); `App.tsx` deleted. Quality gate green: 53/53 tests across 10 files; 100 stmts / 97.29 branch / 100 funcs / 100 lines project-wide; build 324.02 KB JS / **97.51 KB gzip** (+29.21 KB gzip vs Phase 2 — `react-router-dom@7.15.1` accounts for the delta; still well under the 250 KB-gzip ceiling). See [`phase_3_layout_navigation.md`](./phase_3_layout_navigation.md).
-- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 4 implementation, which is verified by MSW-mocked tests.
-- **Next step:** Phase 4 — `src/utils/formatters.ts` (`formatTHB`, `formatPercent`, `formatDateTH`, `trendColor` with module-scoped `Intl` instances), then `MetricCard` / `PortfolioSummary` / `AllocationBar` widgets sourced from `useOverallPerformance()`. `LoadingState` already shipped in Phase 3.
+  - **Phase 4 — Portfolio Summary Widget (2026-05-18):** `src/utils/formatters.ts` exposes `formatTHB` / `formatPercent` / `formatDateTH` / `trendColor` with module-scoped `Intl.NumberFormat` + `Intl.DateTimeFormat` (Vercel `js-cache-function-results`); `src/utils/palette.ts` pulled forward from Phase 5 (`STRATEGY_COLORS as const` tuple); `MetricCard` (pure presentational, `readonly` props, optional `colorClass` + `subtitle`); `PortfolioSummary` subscribes to `useOverallPerformance()` and renders 4 metric cards (Portfolio Value, Today's Return, Max Drawdown, Active Strategies) with each display string memoized on a primitive `data?.field` dep (Vercel `rerender-memo`), inline 4-card skeleton while pending, `role="alert"` inline fallback on error (full `ErrorState` deferred to Phase 8); `AllocationBar` derives sorted segments (weight desc) with cycled palette colors, renders a horizontal stacked bar + legend grid; `DashboardPage` composes `<Suspense fallback={<LoadingState />}>` around both widgets. Quality gate green: 81/81 tests across 14 files; 100 stmts / 97.65 branch / 100 funcs / 100 lines project-wide; build 327.34 KB JS / **98.46 KB gzip** (+0.95 KB gzip vs Phase 3 — four new components + utilities, no new deps). See [`phase_4_portfolio_summary_widget.md`](./phase_4_portfolio_summary_widget.md).
+- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 5 implementation, which is verified by MSW-mocked tests.
+- **Next step:** Phase 5 — Equity Curve Charts. `src/utils/palette.ts` already shipped in Phase 4 (Phase 5 simply consumes `STRATEGY_COLORS`). Next: `src/components/charts/index.ts` `React.lazy` barrel + `EquityCurveChart` / `DrawdownChart` / `MultiStrategyChart` as default-exported lazy chunks so Recharts (~150 KB gzip) never blocks first paint.
 
 ---
 
