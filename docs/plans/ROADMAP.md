@@ -351,30 +351,17 @@ Remaining:
 
 #### 3.1 App Layout
 
-- `[ ]` Create `src/components/layout/AppLayout.tsx` — wraps children in `<Suspense fallback={<LoadingState />}>` so route + chart chunks can stream (Vercel `async-suspense-boundaries`).
-- `[ ]` Create `src/components/layout/Sidebar.tsx` — dynamic nav from `useStrategies()`. Each `<NavLink to={"/strategy/" + s.id}>` is generated from the API; adding a new strategy requires zero code change.
-- `[ ]` Create `src/components/layout/Header.tsx`:
+- `[x]` Create `src/components/layout/AppLayout.tsx` — wraps children in `<Suspense fallback={<LoadingState />}>` so route + chart chunks can stream (Vercel `async-suspense-boundaries`) — done 2026-05-18.
+- `[x]` Create `src/components/layout/Sidebar.tsx` — dynamic nav from `useStrategies()`. Each `<NavLink to={"/strategy/" + s.id}>` is generated from the API; adding a new active strategy requires zero code change — done 2026-05-18.
+- `[x]` Create `src/components/layout/Header.tsx`:
   - Connection indicator (🟢 connected / 🟡 fetching / 🔴 error) derived from `useOverallPerformance().status`.
   - "Last updated: HH:MM:SS" computed from `computed_at`.
-  - Use **`useDeferredValue`** for the timestamp so the header never blocks chart re-renders (Vercel `rerender-use-deferred-value`).
-- `[ ]` Configure React Router in `src/main.tsx`:
-  ```typescript
-  import { BrowserRouter, Route, Routes } from 'react-router-dom'
+  - Uses **`useDeferredValue`** on the formatted timestamp so the header never blocks chart re-renders (Vercel `rerender-use-deferred-value`).
+  - Done 2026-05-18.
+- `[x]` Configure React Router in `src/main.tsx` — `BrowserRouter` outermost, `QueryClientProvider` nested, `AppLayout` containing the `Routes` (`/` → `DashboardPage`, `/strategy/:id` → `StrategyPage`). Done 2026-05-18.
+- `[x]` Verify: navigation between Dashboard ↔ Strategy works; Sidebar shows active strategies from the (mocked) API — verified via MSW-mocked Vitest suite (53/53 tests). End-to-end against a live Gateway remains deferred until `quant-api-gateway` Phase 6 ships.
 
-  <BrowserRouter>
-    <QueryClientProvider client={queryClient}>
-      <AppLayout>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/strategy/:id" element={<StrategyPage />} />
-        </Routes>
-      </AppLayout>
-    </QueryClientProvider>
-  </BrowserRouter>
-  ```
-- `[ ]` Verify: navigation between Dashboard ↔ Strategy works; Sidebar shows active strategies from the API.
-
-**Acceptance criteria:** Layout responsive at ≥1280px. Sidebar entries generated dynamically from API response. Suspense fallback visible during initial load.
+**Acceptance criteria:** Layout responsive at ≥1280px. Sidebar entries generated dynamically from API response. Suspense fallback visible during initial load. ✅ **Phase 3 complete 2026-05-18 — see [`phase_3_layout_navigation.md`](./phase_3_layout_navigation.md).**
 
 ---
 
@@ -653,7 +640,7 @@ This is where Vercel `bundle-dynamic-imports` matters most. All chart components
 
 #### 8.3 UI States
 
-- `[ ]` Create `src/components/ui/LoadingState.tsx` — skeleton that matches real content layout (not a generic spinner).
+- `[x]` Create `src/components/ui/LoadingState.tsx` — skeleton that matches real content layout (not a generic spinner) — shipped in Phase 3 (2026-05-18) as the AppLayout Suspense fallback.
 - `[ ]` Create `src/components/ui/ErrorState.tsx` — error icon + message + Retry button (calls `QueryClient.invalidateQueries` for the failed key).
 - `[ ]` Create `src/components/ui/NotFoundState.tsx` — shown when a strategy id is not in the registry.
 - `[ ]` Tests use `getByRole` / `getByText` per [coding-standards.md §Accessibility](../../.claude/knowledge/coding-standards.md).
@@ -870,13 +857,14 @@ Phase 1 (Project Bootstrap)
 
 ## Current Status
 
-- **Current phase:** Phase 3 — Layout & Navigation.
+- **Current phase:** Phase 4 — Portfolio Summary Widget.
 - **Completed:**
   - Generic scaffold — Vite 6, React 19, TypeScript 5 strict, Biome 1.9, Vitest 3, Husky + lint-staged, Docker multi-stage, Nginx with SPA fallback + security headers, GitHub Actions CI / docker-publish / security-audit, `.claude/` knowledge base, Zod, `pnpm@9.15.0` pinned via Corepack.
   - **Phase 1 — Project Bootstrap (2026-05-18):** domain deps (`@tanstack/react-query`, `react-router-dom`, `recharts`, Tailwind v4), `vite.config.ts` `/api` proxy via `loadEnv`, Zod-validated `src/config.ts` (`loadConfig` / `getConfig` / `ConfigError`), `.env.example` activated, README rebranded, feature folder skeleton via `.gitkeep`, package + index.html + App.tsx rebranded. Quality gate green: 100/90/100/100 coverage; build 195 KB JS / 61 KB gzip. See [`phase_1_bootstrap.md`](./phase_1_bootstrap.md).
   - **Phase 2 — Zod Schemas, Fetch Client & TanStack Query (2026-05-18):** 5 Zod schemas mirroring Gateway Pydantic contracts (`src/api/schemas.ts`); inferred types only in `src/types/gateway.ts` (zero hand-written interfaces); `apiFetch<T>` + `ApiError` in `src/api/client.ts` (relative paths via dev proxy; `safeParse` validates every response); 6 typed query functions covering all 11 Gateway endpoints (`src/api/queries.ts`); 6 TanStack Query hooks (`src/hooks/useGateway.ts`); MSW v2 wired (`src/test/mocks/{handlers,server}.ts` + lifecycle in `src/test-setup.ts`); `QueryClientProvider` in `src/main.tsx` (`staleTime: 4*60s`, `gcTime: 10*60s`, no refetch-on-focus, `retry: 1`). Quality gate green: 38/38 tests; 100% stmts / 98% branch / 100% funcs / 100% lines across `src/api/*` and `src/hooks/*`; build 219.86 KB JS / 68.30 KB gzip. See [`phase_2_zod_schemas_fetch_client.md`](./phase_2_zod_schemas_fetch_client.md).
-- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 3 implementation, which is verified by MSW-mocked tests.
-- **Next step:** Phase 3 — `BrowserRouter` wiring (nest *inside* the existing `QueryClientProvider`), `AppLayout` / `Sidebar` (dynamic nav from `useStrategies()`) / `Header` (connection indicator + `useDeferredValue`-deferred timestamp), route map (`/` → `DashboardPage`, `/strategy/:id` → `StrategyPage`). Replace `src/App.tsx` wholesale with the layout shell.
+  - **Phase 3 — Layout & Navigation (2026-05-18):** `BrowserRouter` outermost wrapping `QueryClientProvider`; `AppLayout` (`src/components/layout/AppLayout.tsx`) wraps `{children}` in `<Suspense fallback={<LoadingState />}>` for Phase 5 lazy chart streaming; `Sidebar` (`src/components/layout/Sidebar.tsx`) auto-generates NavLinks from `useStrategies()` (filtered by `active: true`) with a home link and a skeleton while pending; `Header` (`src/components/layout/Header.tsx`) shows 🟢/🟡/🔴 from `useOverallPerformance().status` and applies `useDeferredValue` to the formatted `HH:MM:SS` timestamp; page stubs `DashboardPage` + `StrategyPage` (named exports); shared `renderWithProviders` test helper in `src/test/render.tsx` (QueryClient + MemoryRouter); `App.tsx` deleted. Quality gate green: 53/53 tests across 10 files; 100 stmts / 97.29 branch / 100 funcs / 100 lines project-wide; build 324.02 KB JS / **97.51 KB gzip** (+29.21 KB gzip vs Phase 2 — `react-router-dom@7.15.1` accounts for the delta; still well under the 250 KB-gzip ceiling). See [`phase_3_layout_navigation.md`](./phase_3_layout_navigation.md).
+- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 4 implementation, which is verified by MSW-mocked tests.
+- **Next step:** Phase 4 — `src/utils/formatters.ts` (`formatTHB`, `formatPercent`, `formatDateTH`, `trendColor` with module-scoped `Intl` instances), then `MetricCard` / `PortfolioSummary` / `AllocationBar` widgets sourced from `useOverallPerformance()`. `LoadingState` already shipped in Phase 3.
 
 ---
 
