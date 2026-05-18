@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
           'src/**/*.test.{ts,tsx}',
           'src/main.tsx',
           'src/test-setup.ts',
+          'src/test/**',
           'src/vite-env.d.ts',
         ],
         thresholds: {
