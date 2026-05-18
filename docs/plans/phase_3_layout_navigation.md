@@ -122,7 +122,7 @@ This phase is purely structural — no widgets, no charts, no filters. Acceptanc
 - [x] `Header` applies `useDeferredValue` to the timestamp string per spec.
 - [x] `BrowserRouter` wired in `main.tsx`; `/` → `DashboardPage`; `/strategy/:id` → `StrategyPage` with the id rendered.
 - [x] ROADMAP §Phase 3 boxes ticked; "Current Status" advanced to Phase 4 (2026-05-18).
-- [ ] PR `feat/phase-3-layout-navigation` → `main` opened — pending push.
+- [x] PR `feat/phase-3-layout-navigation` → `main` opened — [#3](https://github.com/lumduan/quant-dashboard/pull/3) (2026-05-18).
 
 ---
 
