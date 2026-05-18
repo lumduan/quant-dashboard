@@ -1,7 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from '@/App';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { StrategyPage } from '@/pages/StrategyPage';
 import '@/index.css';
 
 const rootElement = document.getElementById('root');
@@ -23,8 +26,15 @@ const queryClient = new QueryClient({
 
 createRoot(rootElement).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <AppLayout>
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/strategy/:id" element={<StrategyPage />} />
+          </Routes>
+        </AppLayout>
+      </QueryClientProvider>
+    </BrowserRouter>
   </StrictMode>,
 );
