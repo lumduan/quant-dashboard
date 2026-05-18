@@ -121,7 +121,7 @@ End-to-end verification against a live Gateway is still deferred (`quant-api-gat
 - [x] `pnpm build` succeeds; main bundle stays well under 250 KB gzip (2026-05-18).
 - [x] `pnpm quality` green (2026-05-18).
 - [x] ROADMAP Phase 4 boxes ticked; "Current Status" advanced to Phase 5 (2026-05-18).
-- [ ] PR `phase/4-portfolio-summary-widget` → `main` opened (pending push).
+- [x] PR `phase/4-portfolio-summary-widget` → `main` opened — [#4](https://github.com/lumduan/quant-dashboard/pull/4) (2026-05-18).
 
 ---
 
