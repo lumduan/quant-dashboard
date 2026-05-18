@@ -119,7 +119,7 @@ Remaining:
 
 #### 2.1 Zod Schemas & Inferred Types
 
-- `[ ]` Create `src/api/schemas.ts` — mirror Gateway Pydantic schemas with Zod:
+- `[x]` Create `src/api/schemas.ts` — mirror Gateway Pydantic schemas with Zod (done 2026-05-18):
   ```typescript
   import { z } from 'zod'
 
@@ -162,7 +162,7 @@ Remaining:
     allocation: z.record(z.string(), z.number()),
   })
   ```
-- `[ ]` Create `src/types/gateway.ts` — inferred types only (no duplicate hand-written interfaces):
+- `[x]` Create `src/types/gateway.ts` — inferred types only (no duplicate hand-written interfaces) — done 2026-05-18:
   ```typescript
   import type { z } from 'zod'
   import type {
@@ -179,13 +179,13 @@ Remaining:
   export type OverallPerformance = z.infer<typeof OverallPerformanceSchema>
   export type PortfolioSnapshot = z.infer<typeof PortfolioSnapshotSchema>
   ```
-- `[ ]` Verify: `pnpm typecheck` passes; schema shapes match the Gateway response contract documented in `quant-api-gateway`.
+- `[x]` Verify: `pnpm typecheck` passes; schema shapes match the Gateway response contract documented in `quant-api-gateway` (done 2026-05-18 — end-to-end Gateway verification deferred until `quant-api-gateway` Phase 6 ships).
 
 **Acceptance criteria:** Hard Rule #4 satisfied — every external response is validated by a Zod schema; every domain type is inferred, never hand-written.
 
 #### 2.2 Fetch Client (no axios)
 
-- `[ ]` Create `src/api/client.ts` — typed `fetch` wrapper using `safeParse` (per [coding-standards.md §Error Handling](../../.claude/knowledge/coding-standards.md)):
+- `[x]` Create `src/api/client.ts` — typed `fetch` wrapper using `safeParse` (per [coding-standards.md §Error Handling](../../.claude/knowledge/coding-standards.md)) — done 2026-05-18:
   ```typescript
   import type { ZodSchema } from 'zod'
 
@@ -220,7 +220,7 @@ Remaining:
     return parsed.data
   }
   ```
-- `[ ]` Create `src/api/queries.ts` — one typed function per endpoint, no shared mutable state (Vercel `server-no-shared-module-state`):
+- `[x]` Create `src/api/queries.ts` — one typed function per endpoint, no shared mutable state (Vercel `server-no-shared-module-state`) — done 2026-05-18:
   ```typescript
   import { z } from 'zod'
   import { apiFetch } from '@/api/client'
@@ -277,14 +277,14 @@ Remaining:
       PortfolioSnapshotSchema,
     )
   ```
-- `[ ]` Co-locate `src/api/client.test.ts` (happy path, HTTP error, schema mismatch). Use **MSW** to mock the network per [coding-standards.md §Tests](../../.claude/knowledge/coding-standards.md).
-- `[ ]` Verify in browser dev tools: `await fetchOverallPerformance()` returns validated typed data via the Vite dev proxy.
+- `[x]` Co-locate `src/api/client.test.ts` (happy path, HTTP error, schema mismatch). Use **MSW** to mock the network per [coding-standards.md §Tests](../../.claude/knowledge/coding-standards.md) — done 2026-05-18 (MSW v2 wired in `src/test/mocks/{handlers,server}.ts`; lifecycle in `src/test-setup.ts`; also added `src/api/queries.test.ts` for URL-assembly coverage).
+- `[-]` Verify in browser dev tools: `await fetchOverallPerformance()` returns validated typed data via the Vite dev proxy — **deferred** until `quant-api-gateway` Phase 6 is live.
 
 **Acceptance criteria:** All 11 endpoints typed and validated. No `any` in the client. Schema mismatches surface as `ApiError`, never silent.
 
 #### 2.3 TanStack Query Hooks
 
-- `[ ]` Wire `QueryClientProvider` in `src/main.tsx` with cache defaults aligned to Gateway's 5-minute cache TTL:
+- `[x]` Wire `QueryClientProvider` in `src/main.tsx` with cache defaults aligned to Gateway's 5-minute cache TTL — done 2026-05-18 (`<BrowserRouter>` intentionally deferred to Phase 3):
   ```typescript
   import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -299,7 +299,7 @@ Remaining:
     },
   })
   ```
-- `[ ]` Create `src/hooks/useGateway.ts` — one hook per endpoint:
+- `[x]` Create `src/hooks/useGateway.ts` — one hook per endpoint (done 2026-05-18 — added `useStrategyPerformance` and `usePortfolioSnapshot` alongside the four in the snippet to cover all 11 Gateway endpoints):
   ```typescript
   import { useQuery } from '@tanstack/react-query'
   import {
@@ -339,7 +339,7 @@ Remaining:
       queryFn: () => fetchPortfolioEquityCurve({ normalize, from, to }),
     })
   ```
-- `[ ]` Co-locate `useGateway.test.ts` — verify cache-key shape, `enabled` gating, and refetch interval.
+- `[x]` Co-locate `useGateway.test.ts` — verify cache-key shape, `enabled` gating, and refetch interval (done 2026-05-18 — 13 tests; cache keys asserted via `client.getQueryCache().findAll()`; `refetchInterval` asserted via `observers[0]?.options.refetchInterval` because in TanStack Query v5 it's a `QueryObserverOptions`, not `QueryOptions`).
 
 **Acceptance criteria:** Hooks typed end-to-end. Same-level queries run in parallel automatically (Vercel `async-parallel`). Dedup handled by TanStack Query (`client-swr-dedup` equivalent).
 
@@ -870,12 +870,13 @@ Phase 1 (Project Bootstrap)
 
 ## Current Status
 
-- **Current phase:** Phase 2 — Zod Schemas, Fetch Client & TanStack Query.
+- **Current phase:** Phase 3 — Layout & Navigation.
 - **Completed:**
   - Generic scaffold — Vite 6, React 19, TypeScript 5 strict, Biome 1.9, Vitest 3, Husky + lint-staged, Docker multi-stage, Nginx with SPA fallback + security headers, GitHub Actions CI / docker-publish / security-audit, `.claude/` knowledge base, Zod, `pnpm@9.15.0` pinned via Corepack.
   - **Phase 1 — Project Bootstrap (2026-05-18):** domain deps (`@tanstack/react-query`, `react-router-dom`, `recharts`, Tailwind v4), `vite.config.ts` `/api` proxy via `loadEnv`, Zod-validated `src/config.ts` (`loadConfig` / `getConfig` / `ConfigError`), `.env.example` activated, README rebranded, feature folder skeleton via `.gitkeep`, package + index.html + App.tsx rebranded. Quality gate green: 100/90/100/100 coverage; build 195 KB JS / 61 KB gzip. See [`phase_1_bootstrap.md`](./phase_1_bootstrap.md).
-- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before Phase 2 can be verified end-to-end.
-- **Next step:** Phase 2 — create `src/api/schemas.ts` (Zod mirrors of Gateway Pydantic schemas), `src/types/gateway.ts` (`z.infer` types), `src/api/client.ts` (typed `apiFetch` wrapper using `safeParse`), `src/api/queries.ts` (one function per endpoint), then wire `useGateway.ts` hooks. `src/config.ts` already exports `getConfig().VITE_API_BASE_URL` if absolute URLs are needed; prefer relative `/api/*` paths so the dev proxy handles routing.
+  - **Phase 2 — Zod Schemas, Fetch Client & TanStack Query (2026-05-18):** 5 Zod schemas mirroring Gateway Pydantic contracts (`src/api/schemas.ts`); inferred types only in `src/types/gateway.ts` (zero hand-written interfaces); `apiFetch<T>` + `ApiError` in `src/api/client.ts` (relative paths via dev proxy; `safeParse` validates every response); 6 typed query functions covering all 11 Gateway endpoints (`src/api/queries.ts`); 6 TanStack Query hooks (`src/hooks/useGateway.ts`); MSW v2 wired (`src/test/mocks/{handlers,server}.ts` + lifecycle in `src/test-setup.ts`); `QueryClientProvider` in `src/main.tsx` (`staleTime: 4*60s`, `gcTime: 10*60s`, no refetch-on-focus, `retry: 1`). Quality gate green: 38/38 tests; 100% stmts / 98% branch / 100% funcs / 100% lines across `src/api/*` and `src/hooks/*`; build 219.86 KB JS / 68.30 KB gzip. See [`phase_2_zod_schemas_fetch_client.md`](./phase_2_zod_schemas_fetch_client.md).
+- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 3 implementation, which is verified by MSW-mocked tests.
+- **Next step:** Phase 3 — `BrowserRouter` wiring (nest *inside* the existing `QueryClientProvider`), `AppLayout` / `Sidebar` (dynamic nav from `useStrategies()`) / `Header` (connection indicator + `useDeferredValue`-deferred timestamp), route map (`/` → `DashboardPage`, `/strategy/:id` → `StrategyPage`). Replace `src/App.tsx` wholesale with the layout shell.
 
 ---
 

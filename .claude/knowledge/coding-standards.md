@@ -119,6 +119,8 @@ return { ok: true, value: parsed.data };
 - **Prefer semantic queries:** `getByRole`, `getByLabelText`, `getByText`. Reach for `getByTestId` only when nothing semantic exists.
 - **Use `@testing-library/user-event`** for interactions — `userEvent.click(button)` rather than `fireEvent.click(button)`. It simulates real user input (focus, events in order).
 - **Mock only the network.** Use MSW for HTTP. Real implementations for everything else — date libraries, math, formatters. Mocks rot; real code doesn't.
+- **MSW v2 setup is project-wide.** Default handlers + typed fixtures live in `src/test/mocks/handlers.ts`; the `setupServer(...handlers)` instance in `src/test/mocks/server.ts`; lifecycle hooks (`beforeAll(server.listen) / afterEach(server.resetHandlers) / afterAll(server.close)`) wired once in `src/test-setup.ts` with `onUnhandledRequest: 'error'`. Per-test overrides go through `server.use(http.get(..., () => HttpResponse.json(...)))`. `src/test/**` is excluded from coverage.
+- **Test TanStack Query hooks with a fresh `QueryClient` per test.** Use a `makeWrapper()` helper that returns `{ wrapper, client }` where `client = new QueryClient({ defaultOptions: { queries: { retry: false } } })`. Run hooks via `renderHook(() => useX(), { wrapper })` from `@testing-library/react`. Never import the production singleton — test isolation depends on it. Cache-key assertions: `client.getQueryCache().findAll()[0]?.queryKey`. `refetchInterval` lives on `QueryObserverOptions`, so assert via `client.getQueryCache().findAll()[0]?.observers[0]?.options.refetchInterval`, not on `query.options`.
 
 ---
 
