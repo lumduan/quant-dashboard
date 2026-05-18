@@ -174,7 +174,7 @@ The repo currently holds the **generic `react-template` scaffold** (Vite 6, Reac
 - [x] README reflects quant-dashboard (no `react-template` strings, no `OWNER/REPO` placeholders)
 - [x] `docs/plans/phase_1_bootstrap.md` exists and acceptance-criteria boxes are ticked
 - [x] `docs/plans/ROADMAP.md` §Phase 1 boxes ticked; "Current Status" advanced to Phase 2
-- [ ] PR opened `feat/phase-1-bootstrap` → `main` on github.com/lumduan/quant-dashboard — _pending push + `gh pr create`_
+- [x] PR opened `feat/phase-1-bootstrap` → `main` on github.com/lumduan/quant-dashboard — [PR #1](https://github.com/lumduan/quant-dashboard/pull/1) (2026-05-18)
 
 ---
 
