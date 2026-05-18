@@ -60,6 +60,12 @@ Why each tool was chosen, and the trade-offs we accepted. Read this before swapp
 
 ---
 
+## Styling
+
+- **Tailwind CSS v4 via `@tailwindcss/vite`** — utility-first CSS, picked up by Vite's plugin with zero JS config. Entry point is a single `@import "tailwindcss";` line in `src/index.css`; theme tokens (when needed) go in `@theme` blocks in the same file. **Trade-off:** v4 is CSS-first and intentionally has *no* `tailwind.config.js` — teammates coming from v3 won't find one. Migration cost from v3-shaped configs is non-zero, but our scaffold starts on v4 so it's not an issue here.
+
+---
+
 ## What We Deliberately Don't Use
 
 - **`npm` / `yarn`** — replaced by `pnpm`. Faster, stricter, deterministic.

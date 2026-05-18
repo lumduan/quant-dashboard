@@ -49,12 +49,12 @@ Already done (verify with `cat package.json`):
 
 Remaining:
 
-- `[ ]` Install domain dependencies (note: `axios` is **deliberately not** installed — use native `fetch` + Zod):
+- `[x]` Install domain dependencies (note: `axios` is **deliberately not** installed — use native `fetch` + Zod) — done 2026-05-18:
   ```bash
   pnpm add @tanstack/react-query react-router-dom recharts
   pnpm add -D tailwindcss @tailwindcss/vite
   ```
-- `[ ]` Configure `vite.config.ts` — add the `/api` proxy and the Tailwind plugin. Use `loadEnv` so the proxy target reads from `.env`:
+- `[x]` Configure `vite.config.ts` — add the `/api` proxy and the Tailwind plugin. Use `loadEnv` so the proxy target reads from `.env` — done 2026-05-18:
   ```typescript
   import { defineConfig, loadEnv } from 'vite'
   import react from '@vitejs/plugin-react'
@@ -78,20 +78,20 @@ Remaining:
     }
   })
   ```
-- `[ ]` Activate `VITE_API_BASE_URL` in `.env.example` (currently commented out):
+- `[x]` Activate `VITE_API_BASE_URL` in `.env.example` (was commented out) — done 2026-05-18:
   ```env
   VITE_APP_NAME=quant-dashboard
   VITE_APP_VERSION=0.1.0
   VITE_API_BASE_URL=http://localhost:8000
   ```
-- `[ ]` Update `src/config.ts` (per [architecture.md §Configuration](../../.claude/knowledge/architecture.md)) — add `VITE_API_BASE_URL` to the env Zod schema so misconfiguration fails fast at startup.
-- `[ ]` Replace the generic-template `README.md` with quant-dashboard-specific overview, dev steps (`pnpm dev`), and deploy steps (`docker compose up -d dashboard`).
+- `[x]` Create `src/config.ts` (per [architecture.md §Configuration](../../.claude/knowledge/architecture.md)) — Zod schema includes `VITE_API_BASE_URL`; exports `loadConfig(env)` + cached `getConfig()` + `ConfigError`. Done 2026-05-18.
+- `[x]` Replace the generic-template `README.md` with quant-dashboard-specific overview, dev steps (`pnpm dev`), and deploy steps (`docker compose up -d dashboard` — full Compose service lands in Phase 9). Done 2026-05-18.
 
 **Acceptance criteria:** `pnpm dev` → Vite on `localhost:5173` proxies `/api/*` to the Gateway. `pnpm build` succeeds. `pnpm quality` passes (lint + format + typecheck + test:coverage).
 
 #### 1.2 Folder Structure
 
-- `[ ]` Create feature folders under `src/` per [architecture.md](../../.claude/knowledge/architecture.md):
+- `[x]` Create feature folders under `src/` per [architecture.md](../../.claude/knowledge/architecture.md) — done 2026-05-18, each empty folder seeded with `.gitkeep`:
   ```
   src/
   ├── api/            # fetch wrappers + Zod response schemas
@@ -107,9 +107,9 @@ Remaining:
   ├── types/          # Shared types (inferred from Zod schemas — no manual duplication)
   └── utils/          # formatters, palette, helpers
   ```
-- `[ ]` No barrel `index.ts` files inside `components/*/` (Vercel `bundle-barrel-imports` — keep import paths statically analyzable). Exception: `src/components/charts/index.ts` re-exports `React.lazy` wrappers (Phase 5).
+- `[x]` No barrel `index.ts` files inside `components/*/` (Vercel `bundle-barrel-imports` — keep import paths statically analyzable). Exception: `src/components/charts/index.ts` re-exports `React.lazy` wrappers (Phase 5). Verified 2026-05-18.
 
-**Acceptance criteria:** Folder layout matches [architecture.md](../../.claude/knowledge/architecture.md). Biome `organizeImports` keeps order. No real credentials in repo.
+**Acceptance criteria:** Folder layout matches [architecture.md](../../.claude/knowledge/architecture.md). Biome `organizeImports` keeps order. No real credentials in repo. ✅ **Phase 1 complete 2026-05-18 — see [`phase_1_bootstrap.md`](./phase_1_bootstrap.md).**
 
 ---
 
@@ -870,11 +870,12 @@ Phase 1 (Project Bootstrap)
 
 ## Current Status
 
-- **Current phase:** Phase 1 — Project Bootstrap (generic scaffold complete; domain dependencies, `/api` proxy, and env config still pending).
+- **Current phase:** Phase 2 — Zod Schemas, Fetch Client & TanStack Query.
 - **Completed:**
   - Generic scaffold — Vite 6, React 19, TypeScript 5 strict, Biome 1.9, Vitest 3, Husky + lint-staged, Docker multi-stage, Nginx with SPA fallback + security headers, GitHub Actions CI / docker-publish / security-audit, `.claude/` knowledge base, Zod, `pnpm@9.15.0` pinned via Corepack.
+  - **Phase 1 — Project Bootstrap (2026-05-18):** domain deps (`@tanstack/react-query`, `react-router-dom`, `recharts`, Tailwind v4), `vite.config.ts` `/api` proxy via `loadEnv`, Zod-validated `src/config.ts` (`loadConfig` / `getConfig` / `ConfigError`), `.env.example` activated, README rebranded, feature folder skeleton via `.gitkeep`, package + index.html + App.tsx rebranded. Quality gate green: 100/90/100/100 coverage; build 195 KB JS / 61 KB gzip. See [`phase_1_bootstrap.md`](./phase_1_bootstrap.md).
 - **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before Phase 2 can be verified end-to-end.
-- **Next step:** finish Phase 1 — install domain dependencies (`@tanstack/react-query`, `react-router-dom`, `recharts`, `tailwindcss`, `@tailwindcss/vite`), add the `/api` proxy to `vite.config.ts`, and activate `VITE_API_BASE_URL` in `.env.example`.
+- **Next step:** Phase 2 — create `src/api/schemas.ts` (Zod mirrors of Gateway Pydantic schemas), `src/types/gateway.ts` (`z.infer` types), `src/api/client.ts` (typed `apiFetch` wrapper using `safeParse`), `src/api/queries.ts` (one function per endpoint), then wire `useGateway.ts` hooks. `src/config.ts` already exports `getConfig().VITE_API_BASE_URL` if absolute URLs are needed; prefer relative `/api/*` paths so the dev proxy handles routing.
 
 ---
 
