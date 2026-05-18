@@ -14,4 +14,16 @@ describe('DashboardPage', () => {
     expect(await screen.findByRole('region', { name: 'Portfolio summary' })).toBeInTheDocument();
     expect(await screen.findByRole('region', { name: 'Capital allocation' })).toBeInTheDocument();
   });
+
+  it('renders the lazy equity-curve and drawdown chart regions once data resolves', async () => {
+    renderWithProviders(<DashboardPage />);
+    expect(await screen.findByRole('region', { name: 'Equity Curve' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Drawdown' })).toBeInTheDocument();
+  });
+
+  it('renders the MultiStrategyChart placeholder (empty series → status message)', async () => {
+    renderWithProviders(<DashboardPage />);
+    expect(await screen.findByRole('region', { name: 'Strategy Comparison' })).toBeInTheDocument();
+    expect(screen.getByText(/select strategies to compare/i)).toBeInTheDocument();
+  });
 });

@@ -427,7 +427,7 @@ This is where Vercel `bundle-dynamic-imports` matters most. All chart components
     '#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6',
   ] as const
   ```
-- `[ ]` Create `src/components/charts/index.ts` — `React.lazy` re-exports (the only allowed barrel in the project):
+- `[x]` Create `src/components/charts/index.ts` — `React.lazy` re-exports (the only allowed barrel in the project). Done 2026-05-18:
   ```typescript
   import { lazy } from 'react'
   export const EquityCurveChart   = lazy(() => import('./EquityCurveChart'))
@@ -438,29 +438,29 @@ This is where Vercel `bundle-dynamic-imports` matters most. All chart components
 
 #### 5.1 EquityCurveChart
 
-- `[ ]` Create `src/components/charts/EquityCurveChart.tsx` (default export for `React.lazy`):
+- `[x]` Create `src/components/charts/EquityCurveChart.tsx` (default export for `React.lazy`) — done 2026-05-18:
   - Props: `readonly data: EquityPoint[]`, `readonly normalize?: boolean`, `readonly height?: number`, `readonly title?: string`.
   - `normalize=true` → Base 100; `normalize=false` → raw THB.
   - `ReferenceLine` at y=100 when normalized.
-  - Tooltip shows formatted value and date.
+  - Tooltip shows formatted value and date (formatter param widened to `unknown` + narrowed inside to satisfy Recharts 3.x's `Formatter<ValueType, NameType>`).
   - `useMemo` for the derived series so chart isn't recomputed on every parent render (Vercel `rerender-memo`).
-- `[ ]` Co-locate test: renders, normalize toggle flips axis baseline, tooltip text contains formatted value.
+- `[x]` Co-locate test (12 tests): renders, normalize toggle flips axis baseline, tooltip text contains formatted value (Done 2026-05-18).
 
-**Acceptance criteria:** Both normalized and raw modes render. `pnpm build` log shows chart code in a separate chunk.
+**Acceptance criteria:** Both normalized and raw modes render. `pnpm build` log shows chart code in separate chunks (`EquityCurveChart-*.js` + shared Recharts `CartesianChart-*.js`).
 
 #### 5.2 DrawdownChart
 
-- `[ ]` Create `src/components/charts/DrawdownChart.tsx`:
-  - Derive drawdown via `useMemo` from the equity series: `(peak - current) / peak * -100`.
-  - Red `<Area />`; X-axis shape matches `EquityCurveChart` so they stack visually.
+- `[x]` Create `src/components/charts/DrawdownChart.tsx` — done 2026-05-18:
+  - Derive drawdown via `useMemo` from the equity series: `(peak - current) / peak * -100` with running peak.
+  - Red `<Area />` (`#ef4444`) with linear-gradient fill; X-axis shape matches `EquityCurveChart` so they stack visually.
   - Tooltip shows drawdown % on hover.
-- `[ ]` Verify peak drawdown matches `OverallPerformance.combined_max_drawdown` from Gateway.
+- `[~]` Verify peak drawdown matches `OverallPerformance.combined_max_drawdown` from Gateway — **deferred**: client-side derivation tested (matches `Math.min(...derivedSeries)`); cross-check against live Gateway response blocked by `quant-api-gateway` Phase 6.
 
-**Acceptance criteria:** DrawdownChart renders correctly; max drawdown matches the Gateway value.
+**Acceptance criteria:** DrawdownChart renders correctly; max-drawdown derivation verified by 12 tests; cross-check against Gateway pending Phase 6.
 
 #### 5.3 MultiStrategyChart
 
-- `[ ]` Create `src/components/charts/MultiStrategyChart.tsx`:
+- `[x]` Create `src/components/charts/MultiStrategyChart.tsx` — done 2026-05-18:
   ```typescript
   interface Series {
     readonly id: string
@@ -470,11 +470,12 @@ This is where Vercel `bundle-dynamic-imports` matters most. All chart components
   }
   ```
   - Always `normalize=true` (cross-scale comparison).
-  - Pulls colors from `STRATEGY_COLORS`.
+  - Pulls colors from `STRATEGY_COLORS` (caller cycles `i % STRATEGY_COLORS.length` and supplies as `Series.color` — same pattern as `AllocationBar`, keeps the chart palette-agnostic).
   - Use **`useDeferredValue`** on the series array so filter changes don't block input (Vercel `rerender-use-deferred-value`).
-- `[ ]` Verify: 2+ strategies render with distinct colors; `Legend` shows strategy names.
+  - Empty-state `<output>` renders "Select strategies to compare" when `series.length === 0` — used as the Phase 5 placeholder until Phase 8 wires per-strategy parallel fetching via `useQueries`.
+- `[x]` Verify (11 tests): 2+ strategies render with distinct colors; `Legend` rendered; rerender from 2 → 3 series converges (Done 2026-05-18).
 
-**Acceptance criteria:** Multiple strategies overlay on one chart with distinct colors and a shared Y-axis.
+**Acceptance criteria:** Multiple strategies overlay on one chart with distinct colors and a shared Y-axis. ✅ **Phase 5 complete 2026-05-18 — see [`phase_5_equity_curve_charts.md`](./phase_5_equity_curve_charts.md).**
 
 ---
 
@@ -857,15 +858,16 @@ Phase 1 (Project Bootstrap)
 
 ## Current Status
 
-- **Current phase:** Phase 5 — Equity Curve Charts.
+- **Current phase:** Phase 6 — Strategy Adapter Components.
 - **Completed:**
   - Generic scaffold — Vite 6, React 19, TypeScript 5 strict, Biome 1.9, Vitest 3, Husky + lint-staged, Docker multi-stage, Nginx with SPA fallback + security headers, GitHub Actions CI / docker-publish / security-audit, `.claude/` knowledge base, Zod, `pnpm@9.15.0` pinned via Corepack.
   - **Phase 1 — Project Bootstrap (2026-05-18):** domain deps (`@tanstack/react-query`, `react-router-dom`, `recharts`, Tailwind v4), `vite.config.ts` `/api` proxy via `loadEnv`, Zod-validated `src/config.ts` (`loadConfig` / `getConfig` / `ConfigError`), `.env.example` activated, README rebranded, feature folder skeleton via `.gitkeep`, package + index.html + App.tsx rebranded. Quality gate green: 100/90/100/100 coverage; build 195 KB JS / 61 KB gzip. See [`phase_1_bootstrap.md`](./phase_1_bootstrap.md).
   - **Phase 2 — Zod Schemas, Fetch Client & TanStack Query (2026-05-18):** 5 Zod schemas mirroring Gateway Pydantic contracts (`src/api/schemas.ts`); inferred types only in `src/types/gateway.ts` (zero hand-written interfaces); `apiFetch<T>` + `ApiError` in `src/api/client.ts` (relative paths via dev proxy; `safeParse` validates every response); 6 typed query functions covering all 11 Gateway endpoints (`src/api/queries.ts`); 6 TanStack Query hooks (`src/hooks/useGateway.ts`); MSW v2 wired (`src/test/mocks/{handlers,server}.ts` + lifecycle in `src/test-setup.ts`); `QueryClientProvider` in `src/main.tsx` (`staleTime: 4*60s`, `gcTime: 10*60s`, no refetch-on-focus, `retry: 1`). Quality gate green: 38/38 tests; 100% stmts / 98% branch / 100% funcs / 100% lines across `src/api/*` and `src/hooks/*`; build 219.86 KB JS / 68.30 KB gzip. See [`phase_2_zod_schemas_fetch_client.md`](./phase_2_zod_schemas_fetch_client.md).
   - **Phase 3 — Layout & Navigation (2026-05-18):** `BrowserRouter` outermost wrapping `QueryClientProvider`; `AppLayout` (`src/components/layout/AppLayout.tsx`) wraps `{children}` in `<Suspense fallback={<LoadingState />}>` for Phase 5 lazy chart streaming; `Sidebar` (`src/components/layout/Sidebar.tsx`) auto-generates NavLinks from `useStrategies()` (filtered by `active: true`) with a home link and a skeleton while pending; `Header` (`src/components/layout/Header.tsx`) shows 🟢/🟡/🔴 from `useOverallPerformance().status` and applies `useDeferredValue` to the formatted `HH:MM:SS` timestamp; page stubs `DashboardPage` + `StrategyPage` (named exports); shared `renderWithProviders` test helper in `src/test/render.tsx` (QueryClient + MemoryRouter); `App.tsx` deleted. Quality gate green: 53/53 tests across 10 files; 100 stmts / 97.29 branch / 100 funcs / 100 lines project-wide; build 324.02 KB JS / **97.51 KB gzip** (+29.21 KB gzip vs Phase 2 — `react-router-dom@7.15.1` accounts for the delta; still well under the 250 KB-gzip ceiling). See [`phase_3_layout_navigation.md`](./phase_3_layout_navigation.md).
   - **Phase 4 — Portfolio Summary Widget (2026-05-18):** `src/utils/formatters.ts` exposes `formatTHB` / `formatPercent` / `formatDateTH` / `trendColor` with module-scoped `Intl.NumberFormat` + `Intl.DateTimeFormat` (Vercel `js-cache-function-results`); `src/utils/palette.ts` pulled forward from Phase 5 (`STRATEGY_COLORS as const` tuple); `MetricCard` (pure presentational, `readonly` props, optional `colorClass` + `subtitle`); `PortfolioSummary` subscribes to `useOverallPerformance()` and renders 4 metric cards (Portfolio Value, Today's Return, Max Drawdown, Active Strategies) with each display string memoized on a primitive `data?.field` dep (Vercel `rerender-memo`), inline 4-card skeleton while pending, `role="alert"` inline fallback on error (full `ErrorState` deferred to Phase 8); `AllocationBar` derives sorted segments (weight desc) with cycled palette colors, renders a horizontal stacked bar + legend grid; `DashboardPage` composes `<Suspense fallback={<LoadingState />}>` around both widgets. Quality gate green: 81/81 tests across 14 files; 100 stmts / 97.65 branch / 100 funcs / 100 lines project-wide; build 327.34 KB JS / **98.46 KB gzip** (+0.95 KB gzip vs Phase 3 — four new components + utilities, no new deps). See [`phase_4_portfolio_summary_widget.md`](./phase_4_portfolio_summary_widget.md).
-- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 5 implementation, which is verified by MSW-mocked tests.
-- **Next step:** Phase 5 — Equity Curve Charts. `src/utils/palette.ts` already shipped in Phase 4 (Phase 5 simply consumes `STRATEGY_COLORS`). Next: `src/components/charts/index.ts` `React.lazy` barrel + `EquityCurveChart` / `DrawdownChart` / `MultiStrategyChart` as default-exported lazy chunks so Recharts (~150 KB gzip) never blocks first paint.
+  - **Phase 5 — Equity Curve Charts (2026-05-18):** `src/components/charts/index.ts` `React.lazy` barrel (only allowed barrel in the project) re-exports three default-exported chart components: `EquityCurveChart` (Base-100 normalize toggle + `<ReferenceLine y={100} />`, `useMemo` derived series, Recharts 3.x Tooltip formatter widened to `unknown`); `DrawdownChart` (running-peak derivation `(peak - value) / peak * -100` via `useMemo`, red `<Area />` with linear-gradient fill); `MultiStrategyChart` (per-series Base-100 normalization, `useDeferredValue` on the `series` prop per Vercel `rerender-use-deferred-value`, merged-by-date dataset via `useMemo`, `<Legend />`, `<output>` empty-state when `series.length === 0`); `DashboardPage` adds a 2-col chart row (EquityCurve + Drawdown) wrapped in `<Suspense fallback={<LoadingState />}>` and a MultiStrategyChart placeholder (series=[] until Phase 8 wires `useQueries`); MSW `equityCurve` fixture extended to 30 deterministic daily points starting at 1,000,000. Tests use `vi.mock('recharts', …)` with `<div data-testid="X" data-points={JSON.stringify(data)} data-color={stroke}>` shells so derivation correctness is asserted via `JSON.parse(el.dataset.points)` — no DOM measurement, no hover-tooltip interaction. Quality gate green: 118/118 tests across 17 files; 99.84 stmts / 93.96 branch / 98 funcs / 99.84 lines project-wide; **main bundle 330.41 KB JS / 99.75 KB gzip (+1.29 KB gzip vs Phase 4)**; Recharts code-split into 5 lazy chunks totalling ~118 KB gzip (largest: `CartesianChart-*.js` 101.50 KB gzip, loads only when a chart Suspense boundary mounts). See [`phase_5_equity_curve_charts.md`](./phase_5_equity_curve_charts.md).
+- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 6 implementation, which is verified by MSW-mocked tests.
+- **Next step:** Phase 6 — Strategy Adapter Components. `StrategyAdapterFactory` (Record-based O(1) adapter lookup), `CSMSetAdapter` (EQUITY_MOMENTUM — wires `EquityCurveChart` from Phase 5), `TFEXAdapter` (stub), `DefaultAdapter` (unknown-type fallback with warning badge).
 
 ---
 
