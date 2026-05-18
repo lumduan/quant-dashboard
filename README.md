@@ -1,189 +1,148 @@
-# react-template
+# quant-dashboard
 
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
-[![Docker Publish](https://github.com/OWNER/REPO/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/docker-publish.yml)
-[![Security Scan](https://github.com/OWNER/REPO/actions/workflows/security.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/security.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+React 19 SPA for the quant trading system. Displays **Portfolio Performance**, **Equity Curves**, and **Strategy Details**, fed by [`quant-api-gateway`](https://github.com/lumduan/quant-api-gateway) over REST.
 
-Universal React project template — pnpm-native, Docker-ready, AI-agent enabled.
+> **Principle:** Gateway computes everything. Dashboard only receives JSON and renders it.
 
 ---
 
-## Features
+## Stack
 
-- **pnpm-native** — single `package.json` as source of truth; `packageManager` field pins the version via Corepack
-- **Docker** — multi-stage build, `node:20-alpine` builder → `nginx:1.27-alpine` server, under 30 MB final image
-- **Type-safe** — `tsc --strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` on all source code
-- **Linted & formatted** — Biome with lint + format in one tool, one config, one binary
-- **≥80% coverage** — Vitest + `@vitest/coverage-v8` enforced in CI (lines, functions, branches, statements)
-- **Security scanning** — weekly `pnpm audit` in GitHub Actions, fail on high/critical
-- **Pre-commit hooks** — Biome lint + format on staged files via husky + lint-staged
-- **AI-agent ready** — `.claude/` directory with knowledge, playbooks, memory, and prompt-engineering guidance
-
----
-
-## Directory Structure
-
-```
-react-template/
-├── .claude/                      # AI agent knowledge, playbooks, memory
-│   ├── knowledge/                # Operating rules, standards, architecture
-│   ├── playbooks/                # Repeatable workflows (feature dev, etc.)
-│   ├── prompts/                  # Prompt-engineering guidance
-│   ├── memory/                   # Anti-patterns, recurring bugs
-│   └── skills/                   # Agent skills (Vercel React Best Practices)
-├── .github/
-│   ├── workflows/                # CI, Docker publish, security scan
-│   ├── ISSUE_TEMPLATE/           # Bug report, feature request
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── FUNDING.yml
-├── .husky/
-│   └── pre-commit                # lint-staged hook
-├── src/
-│   ├── main.tsx                  # React 19 entry point
-│   ├── App.tsx                   # Root component
-│   ├── App.test.tsx              # Co-located test
-│   ├── test-setup.ts             # Vitest setup (jest-dom matchers)
-│   └── vite-env.d.ts             # Vite client types
-├── public/
-│   └── favicon.svg
-├── Dockerfile                    # Multi-stage build
-├── nginx.conf                    # SPA fallback, security headers, gzip, cache
-├── biome.json                    # Lint + format
-├── tsconfig.json                 # Strict TypeScript
-├── tsconfig.node.json
-├── vite.config.ts                # Vite + Vitest config
-├── package.json
-├── index.html
-├── .env.example
-├── CHANGELOG.md
-├── CODE_OF_CONDUCT.md
-├── CONTRIBUTING.md
-├── LICENSE                       # MIT
-├── README.md
-└── SECURITY.md
-```
+- **React 19** + **Vite 6** + **TypeScript 5** (strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`)
+- **TanStack Query** for client cache + dedup
+- **React Router** for routing
+- **Recharts** for charts (lazy-loaded in Phase 5)
+- **Tailwind CSS v4** (CSS-first via `@tailwindcss/vite`)
+- **Zod** at every external boundary (Hard Rule #4)
+- **Biome 1.9** for lint + format (replaces ESLint + Prettier)
+- **Vitest 3** + `@testing-library/react` + `@vitest/coverage-v8` (≥80% gate)
+- **pnpm 9** pinned via Corepack — no `npm` / `yarn` / `bun`
 
 ---
 
 ## Prerequisites
 
-- **Node.js 20+** (22 is also tested in CI)
-- **pnpm 9+** via Corepack — comes bundled with modern Node:
+- Node.js 20+
+- pnpm 9 via Corepack (bundled with modern Node):
 
-```bash
-corepack enable
-corepack prepare pnpm@9.15.0 --activate
-```
+  ```bash
+  corepack enable
+  corepack prepare pnpm@9.15.0 --activate
+  ```
 
-- **Docker** (optional, for containerized builds)
+- Docker — optional, for the containerized build (full Compose stack lands in Phase 9).
 
 ---
 
-## Installation
+## Local development
 
 ```bash
-# Use this template on GitHub, then clone your new repo
-git clone https://github.com/OWNER/REPO.git
-cd REPO
-
-# Install
+# 1. Clone and install
+git clone https://github.com/lumduan/quant-dashboard.git
+cd quant-dashboard
 pnpm install
 
-# Start dev server (HMR on http://localhost:5173)
+# 2. Configure environment
+cp .env.example .env
+# .env points VITE_API_BASE_URL at the Gateway; default is http://localhost:8000
+
+# 3. Start the dev server (HMR on http://localhost:5173)
 pnpm dev
 ```
 
+`pnpm dev` proxies `/api/*` to whatever `VITE_API_BASE_URL` is set to in `.env` (default `http://localhost:8000`), so dashboard code can call `/api/v1/...` paths without worrying about CORS in development.
+
+To see real data you also need [`quant-api-gateway`](https://github.com/lumduan/quant-api-gateway) running on `quant-network` — Phase 9 will wire both into a single `docker compose up`.
+
 ---
 
-## Running with Docker
+## Scripts
+
+| Task | Command |
+|---|---|
+| Dev server (HMR) | `pnpm dev` |
+| Production build | `pnpm build` |
+| Preview production build | `pnpm preview` |
+| Lint | `pnpm lint` |
+| Lint + auto-fix | `pnpm lint:fix` |
+| Format check | `pnpm format` |
+| Format write | `pnpm format:fix` |
+| Type check | `pnpm typecheck` |
+| Tests (one shot) | `pnpm test` |
+| Tests in watch mode | `pnpm test:watch` |
+| Tests + coverage report | `pnpm test:coverage` |
+| **Full quality gate (CI parity)** | `pnpm quality` |
+
+The pre-commit hook runs Biome on staged files via husky + lint-staged.
+
+---
+
+## Docker (preview)
+
+The full multi-service `docker compose up -d dashboard` workflow lands in **Phase 9** (see `docs/plans/ROADMAP.md`). The current image build still works standalone:
 
 ```bash
-docker build -t react-template:dev .
-docker run --rm -p 8080:80 react-template:dev
+docker build -t quant-dashboard:dev .
+docker run --rm -p 8080:80 quant-dashboard:dev
 # open http://localhost:8080
 ```
 
-The image is multi-stage: `node:20-alpine` builds, `nginx:1.27-alpine` serves. Final image stays under 30 MB. See `Dockerfile` and `nginx.conf` for the details (security headers, SPA fallback, asset caching).
+The image is multi-stage: `node:20-alpine` builds, `nginx:1.27-alpine` serves the SPA with security headers, gzip, hashed-asset caching, and an SPA fallback. See `Dockerfile` + `nginx.conf`.
 
 ---
 
-## Testing
+## Project structure
 
-```bash
-pnpm test               # Run once
-pnpm test:watch         # Watch mode (dev)
-pnpm test:coverage      # With coverage report
+```
+quant-dashboard/
+├── .claude/                       # AI agent knowledge, skills, memory
+├── docs/plans/
+│   ├── ROADMAP.md                 # 9-phase plan (current: Phase 1)
+│   └── phase_1_bootstrap.md       # this phase's plan + acceptance criteria
+└── src/
+    ├── main.tsx                   # React 19 entry
+    ├── App.tsx                    # Phase 1 placeholder; replaced by AppLayout in Phase 3
+    ├── config.ts                  # Zod-validated env (loadConfig / getConfig)
+    ├── index.css                  # Tailwind v4 entry (@import "tailwindcss";)
+    ├── api/                       # fetch wrappers + Zod schemas (Phase 2)
+    ├── hooks/                     # TanStack Query + UI hooks (Phase 2+)
+    ├── pages/                     # Route-level components (Phase 8)
+    ├── types/                     # z.infer types (Phase 2)
+    ├── utils/                     # formatters, palette (Phase 4+)
+    └── components/
+        ├── charts/                # Recharts wrappers, React.lazy in Phase 5
+        ├── filters/               # Strategy selector, date range (Phase 7)
+        ├── layout/                # AppLayout, Sidebar, Header (Phase 3)
+        ├── strategy/              # Strategy adapter components (Phase 6)
+        ├── ui/                    # Loading/Error/NotFound states (Phase 8)
+        └── widgets/               # MetricCard, PortfolioSummary, etc. (Phase 4)
 ```
 
-Coverage thresholds (≥80% on lines, functions, branches, statements) are enforced by Vitest and fail CI if not met. The threshold is a floor — well-tested modules should exceed 95%.
-
-Tests live next to their source files (`Foo.tsx` ↔ `Foo.test.tsx`). Integration tests that span modules live in `tests/`.
+Empty folders currently hold a `.gitkeep` placeholder; placeholders are removed naturally as each phase populates its folder.
 
 ---
 
-## Linting, Formatting, and Type Checking
+## AI agent workflows
 
-```bash
-pnpm lint               # Biome lint
-pnpm lint:fix           # Lint + auto-fix
-pnpm format             # Biome format check
-pnpm format:fix         # Format write
-pnpm typecheck          # tsc --noEmit
-pnpm quality            # All of the above + tests with coverage
-```
-
-The pre-commit hook (`husky`) runs `lint-staged`, which auto-fixes Biome issues on staged `.ts` / `.tsx` files. The CI workflow runs the full quality gate on every push to `main` and every PR.
-
----
-
-## Using `.claude/` for AI Agent Workflows
-
-The `.claude/` directory contains structured knowledge that any AI agent (Claude Code, Copilot, Cursor) can absorb to understand and contribute to this repo without hand-holding.
+`.claude/` is the entry point for any AI agent (Claude Code, Copilot, Cursor) working on this repo:
 
 | File | Purpose |
 |---|---|
-| `.claude/knowledge/project-skill.md` | Hard Rules + Soft Conventions — the operating rules |
-| `.claude/knowledge/coding-standards.md` | Naming, typing, file structure conventions |
-| `.claude/knowledge/commands.md` | All commands reference (pnpm, docker, biome) |
-| `.claude/knowledge/stack-decisions.md` | Why each tool was chosen + trade-offs |
-| `.claude/knowledge/architecture.md` | Module boundaries, data flow, where code lives |
-| `.claude/playbooks/feature-development.md` | 8-step workflow for adding features |
-| `.claude/prompts/Prompt-Engineer.prompt.md` | How to write effective prompts for this repo |
-| `.claude/memory/anti-patterns.md` | What NOT to do + why + the right approach |
-| `.claude/memory/recurring-bugs.md` | Known tricky bugs and their fixes |
-| `.claude/skills/vercel-react-best-practices/` | Vercel Engineered performance rules (70+ rules, 8 categories) |
+| [`.claude/knowledge/project-skill.md`](./.claude/knowledge/project-skill.md) | Hard Rules + Soft Conventions |
+| [`.claude/knowledge/coding-standards.md`](./.claude/knowledge/coding-standards.md) | Naming, typing, structure |
+| [`.claude/knowledge/commands.md`](./.claude/knowledge/commands.md) | Every `pnpm` / docker / git command |
+| [`.claude/knowledge/stack-decisions.md`](./.claude/knowledge/stack-decisions.md) | Why each tool was chosen |
+| [`.claude/knowledge/architecture.md`](./.claude/knowledge/architecture.md) | Module boundaries, data flow |
+| [`.claude/skills/vercel-react-best-practices/SKILL.md`](./.claude/skills/vercel-react-best-practices/SKILL.md) | Vercel's 70+ React performance rules |
+| [`docs/plans/ROADMAP.md`](./docs/plans/ROADMAP.md) | 9-phase implementation plan |
 
-**How to use:** point your agent at `.claude/knowledge/project-skill.md` first. Everything else links from there. When you discover something worth remembering, add it to the appropriate file — `.claude/` is a living document.
-
----
-
-## Security Scanning
-
-A weekly `pnpm audit --audit-level=high` runs in GitHub Actions (`.github/workflows/security.yml`) and fails on high or critical vulnerabilities. The same scan runs on every PR that touches `package.json` or `pnpm-lock.yaml`.
-
-To run locally:
-
-```bash
-pnpm audit                       # All severities
-pnpm audit --audit-level=high    # CI-equivalent
-```
-
-See `SECURITY.md` for the vulnerability disclosure process.
+Point your agent at `.claude/knowledge/project-skill.md` first. Everything else links from there.
 
 ---
 
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow, Conventional Commits format, quality gate, and PR process.
-
-The 8-step development workflow lives in [`.claude/playbooks/feature-development.md`](./.claude/playbooks/feature-development.md).
-
----
-
-## Security
-
-To report a vulnerability, see [SECURITY.md](./SECURITY.md). Please **do not** open a public issue for security reports.
 
 ---
 

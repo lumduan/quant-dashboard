@@ -5,11 +5,11 @@ import { App } from '@/App';
 describe('App', () => {
   it('renders the heading text', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1, name: 'react-template' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'quant-dashboard' })).toBeInTheDocument();
   });
 
-  it('renders the tagline paragraph', () => {
+  it('renders the placeholder tagline', () => {
     render(<App />);
-    expect(screen.getByText('Fork-ready. AI-agent enabled.')).toBeInTheDocument();
+    expect(screen.getByText(/React 19 SPA for the quant trading system/)).toBeInTheDocument();
   });
 });
