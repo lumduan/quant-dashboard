@@ -22,6 +22,8 @@ services:
     restart: always
     ports:
       - "3000:80"
+    environment:
+      - API_UPSTREAM=${API_UPSTREAM}
     # depends_on for `api-gateway` is intentionally commented out: this
     # compose file lives inside quant-dashboard/ and does not declare the
     # api-gateway service, so Docker Compose rejects the reference as
