@@ -485,7 +485,7 @@ This is where Vercel `bundle-dynamic-imports` matters most. All chart components
 
 #### 6.1 Adapter Factory
 
-- `[ ]` Create `src/components/strategy/StrategyAdapterFactory.tsx`. The `Record` is an O(1) lookup (Vercel `js-set-map-lookups`):
+- `[x]` Create `src/components/strategy/StrategyAdapterFactory.tsx`. The `Record` is an O(1) lookup (Vercel `js-set-map-lookups`) — done 2026-05-19:
   ```typescript
   import type { ComponentType } from 'react'
   import type { StrategyInfo } from '@/types/gateway'
@@ -508,30 +508,30 @@ This is where Vercel `bundle-dynamic-imports` matters most. All chart components
   }
   ```
 
-**Acceptance criteria:** Adding a new strategy type only requires adding to `ADAPTER_MAP` — no other code changes.
+**Acceptance criteria:** Adding a new strategy type only requires adding to `ADAPTER_MAP` — no other code changes. ✅ done 2026-05-19.
 
 #### 6.2 CSMSetAdapter (EQUITY_MOMENTUM)
 
-- `[ ]` Create `src/components/strategy/CSMSetAdapter.tsx`:
+- `[x]` Create `src/components/strategy/CSMSetAdapter.tsx` (done 2026-05-19):
   - Performance metrics: Daily PnL, Total Value, Sharpe Ratio, Max Drawdown.
-  - Lazy `EquityCurveChart` (`normalize=true`) sourced from `useStrategyEquityCurve(strategy.id)`.
+  - Lazy `EquityCurveChart` (`normalize=true`) sourced from `useStrategyEquityCurve(strategy.id)` and wrapped in its own `<Suspense fallback={<LoadingState />}>` so chart lazy-loading doesn't unmount the metrics row.
   - Capital-weight badge: `Weight: {(strategy.capital_weight * 100).toFixed(0)}% of portfolio`.
-  - Dev-only collapsible raw-JSON viewer gated by `import.meta.env.DEV`.
-- `[ ]` Co-locate test (renders all metrics; chart `Suspense` fallback shows then resolves).
+  - Dev-only collapsible raw-JSON viewer gated by `import.meta.env.DEV` (constant-folded out of the production bundle).
+- `[x]` Co-locate test — done 2026-05-19 (6 tests; `vi.mock('recharts', …)` shells; chart Suspense resolves via `findByRole('region', { name: 'Equity Curve' })`).
 
-**Acceptance criteria:** CSM-SET shows equity curve + all metrics. No TypeScript errors.
+**Acceptance criteria:** CSM-SET shows equity curve + all metrics. No TypeScript errors. ✅ done 2026-05-19.
 
 #### 6.3 DefaultAdapter & TFEXAdapter
 
-- `[ ]` Create `src/components/strategy/DefaultAdapter.tsx`:
-  - Yellow warning badge: `Strategy type "{type}" has no adapter`.
-  - Shows generic performance metrics so unknown types don't break the page.
-- `[ ]` Create `src/components/strategy/TFEXAdapter.tsx` — stub for future TFEX integration:
-  - "Coming soon" UI.
-  - Props prepared: `margin_level`, `contract_expiry`, `position_direction`.
-- `[ ]` Verify: unknown strategy type → `DefaultAdapter` with warning; page still renders.
+- `[x]` Create `src/components/strategy/DefaultAdapter.tsx` — done 2026-05-19:
+  - Yellow warning `<output>` (implicit `role="status"`): `Strategy type "{type}" has no adapter — falling back to generic metrics`.
+  - Shows generic performance metrics (Daily PnL / Total Value / Sharpe / Max DD) so unknown types don't break the page.
+- `[x]` Create `src/components/strategy/TFEXAdapter.tsx` — stub for future TFEX integration; done 2026-05-19:
+  - "Coming soon" UI with strategy name + `Type: TFEX_FUTURES` label.
+  - Exported `TFEXFutureFields` interface documents `margin_level?`, `contract_expiry?`, `position_direction?: 'LONG' | 'SHORT'` (NOT added to `StrategyInfoSchema` — Hard Rule #4 mirrors Gateway, not speculative futures).
+- `[x]` Verify: unknown strategy type → `DefaultAdapter` with warning; page still renders — done 2026-05-19 (factory test routes `EQUITY_MOMENTUM` → CSMSet, `TFEX_FUTURES` → TFEX, `OPTIONS_GAMMA` → DefaultAdapter).
 
-**Acceptance criteria:** Unknown type does not crash the dashboard; fallback UI displays correctly.
+**Acceptance criteria:** Unknown type does not crash the dashboard; fallback UI displays correctly. ✅ **Phase 6 complete 2026-05-19 — see [`phase_6_strategy_adapter_components.md`](./phase_6_strategy_adapter_components.md).**
 
 ---
 
@@ -858,7 +858,7 @@ Phase 1 (Project Bootstrap)
 
 ## Current Status
 
-- **Current phase:** Phase 6 — Strategy Adapter Components.
+- **Current phase:** Phase 7 — Interactive Filter & Date Range.
 - **Completed:**
   - Generic scaffold — Vite 6, React 19, TypeScript 5 strict, Biome 1.9, Vitest 3, Husky + lint-staged, Docker multi-stage, Nginx with SPA fallback + security headers, GitHub Actions CI / docker-publish / security-audit, `.claude/` knowledge base, Zod, `pnpm@9.15.0` pinned via Corepack.
   - **Phase 1 — Project Bootstrap (2026-05-18):** domain deps (`@tanstack/react-query`, `react-router-dom`, `recharts`, Tailwind v4), `vite.config.ts` `/api` proxy via `loadEnv`, Zod-validated `src/config.ts` (`loadConfig` / `getConfig` / `ConfigError`), `.env.example` activated, README rebranded, feature folder skeleton via `.gitkeep`, package + index.html + App.tsx rebranded. Quality gate green: 100/90/100/100 coverage; build 195 KB JS / 61 KB gzip. See [`phase_1_bootstrap.md`](./phase_1_bootstrap.md).
@@ -866,8 +866,9 @@ Phase 1 (Project Bootstrap)
   - **Phase 3 — Layout & Navigation (2026-05-18):** `BrowserRouter` outermost wrapping `QueryClientProvider`; `AppLayout` (`src/components/layout/AppLayout.tsx`) wraps `{children}` in `<Suspense fallback={<LoadingState />}>` for Phase 5 lazy chart streaming; `Sidebar` (`src/components/layout/Sidebar.tsx`) auto-generates NavLinks from `useStrategies()` (filtered by `active: true`) with a home link and a skeleton while pending; `Header` (`src/components/layout/Header.tsx`) shows 🟢/🟡/🔴 from `useOverallPerformance().status` and applies `useDeferredValue` to the formatted `HH:MM:SS` timestamp; page stubs `DashboardPage` + `StrategyPage` (named exports); shared `renderWithProviders` test helper in `src/test/render.tsx` (QueryClient + MemoryRouter); `App.tsx` deleted. Quality gate green: 53/53 tests across 10 files; 100 stmts / 97.29 branch / 100 funcs / 100 lines project-wide; build 324.02 KB JS / **97.51 KB gzip** (+29.21 KB gzip vs Phase 2 — `react-router-dom@7.15.1` accounts for the delta; still well under the 250 KB-gzip ceiling). See [`phase_3_layout_navigation.md`](./phase_3_layout_navigation.md).
   - **Phase 4 — Portfolio Summary Widget (2026-05-18):** `src/utils/formatters.ts` exposes `formatTHB` / `formatPercent` / `formatDateTH` / `trendColor` with module-scoped `Intl.NumberFormat` + `Intl.DateTimeFormat` (Vercel `js-cache-function-results`); `src/utils/palette.ts` pulled forward from Phase 5 (`STRATEGY_COLORS as const` tuple); `MetricCard` (pure presentational, `readonly` props, optional `colorClass` + `subtitle`); `PortfolioSummary` subscribes to `useOverallPerformance()` and renders 4 metric cards (Portfolio Value, Today's Return, Max Drawdown, Active Strategies) with each display string memoized on a primitive `data?.field` dep (Vercel `rerender-memo`), inline 4-card skeleton while pending, `role="alert"` inline fallback on error (full `ErrorState` deferred to Phase 8); `AllocationBar` derives sorted segments (weight desc) with cycled palette colors, renders a horizontal stacked bar + legend grid; `DashboardPage` composes `<Suspense fallback={<LoadingState />}>` around both widgets. Quality gate green: 81/81 tests across 14 files; 100 stmts / 97.65 branch / 100 funcs / 100 lines project-wide; build 327.34 KB JS / **98.46 KB gzip** (+0.95 KB gzip vs Phase 3 — four new components + utilities, no new deps). See [`phase_4_portfolio_summary_widget.md`](./phase_4_portfolio_summary_widget.md).
   - **Phase 5 — Equity Curve Charts (2026-05-18):** `src/components/charts/index.ts` `React.lazy` barrel (only allowed barrel in the project) re-exports three default-exported chart components: `EquityCurveChart` (Base-100 normalize toggle + `<ReferenceLine y={100} />`, `useMemo` derived series, Recharts 3.x Tooltip formatter widened to `unknown`); `DrawdownChart` (running-peak derivation `(peak - value) / peak * -100` via `useMemo`, red `<Area />` with linear-gradient fill); `MultiStrategyChart` (per-series Base-100 normalization, `useDeferredValue` on the `series` prop per Vercel `rerender-use-deferred-value`, merged-by-date dataset via `useMemo`, `<Legend />`, `<output>` empty-state when `series.length === 0`); `DashboardPage` adds a 2-col chart row (EquityCurve + Drawdown) wrapped in `<Suspense fallback={<LoadingState />}>` and a MultiStrategyChart placeholder (series=[] until Phase 8 wires `useQueries`); MSW `equityCurve` fixture extended to 30 deterministic daily points starting at 1,000,000. Tests use `vi.mock('recharts', …)` with `<div data-testid="X" data-points={JSON.stringify(data)} data-color={stroke}>` shells so derivation correctness is asserted via `JSON.parse(el.dataset.points)` — no DOM measurement, no hover-tooltip interaction. Quality gate green: 118/118 tests across 17 files; 99.84 stmts / 93.96 branch / 98 funcs / 99.84 lines project-wide; **main bundle 330.41 KB JS / 99.75 KB gzip (+1.29 KB gzip vs Phase 4)**; Recharts code-split into 5 lazy chunks totalling ~118 KB gzip (largest: `CartesianChart-*.js` 101.50 KB gzip, loads only when a chart Suspense boundary mounts). See [`phase_5_equity_curve_charts.md`](./phase_5_equity_curve_charts.md).
-- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 6 implementation, which is verified by MSW-mocked tests.
-- **Next step:** Phase 6 — Strategy Adapter Components. `StrategyAdapterFactory` (Record-based O(1) adapter lookup), `CSMSetAdapter` (EQUITY_MOMENTUM — wires `EquityCurveChart` from Phase 5), `TFEXAdapter` (stub), `DefaultAdapter` (unknown-type fallback with warning badge).
+  - **Phase 6 — Strategy Adapter Components (2026-05-19):** `StrategyAdapterFactory` (`src/components/strategy/StrategyAdapterFactory.tsx`) with O(1) `ADAPTER_MAP: Readonly<Record<string, ComponentType<StrategyAdapterProps>>>` dispatching `EQUITY_MOMENTUM → CSMSetAdapter`, `TFEX_FUTURES → TFEXAdapter`, unknown `?? DefaultAdapter` (Vercel `js-set-map-lookups`; no switch / no if-else); `CSMSetAdapter` renders capital-weight badge + 4 metric cards (Daily PnL formatted THB + `trendColor`, Total Value, Sharpe `.toFixed(2)`, Max Drawdown `formatPercent`) memoized on primitive deps, lazy `EquityCurveChart` from the barrel wrapped in its own `<Suspense fallback={<LoadingState />}>`, DEV-only `<details>{JSON.stringify(...)}</details>` gated by `import.meta.env.DEV` (constant-folded out of prod); `DefaultAdapter` shows a yellow `<output>` warning (`role="status"` implicit) plus the same generic metrics row so unknown types never crash; `TFEXAdapter` is a pure "Coming soon" stub exporting `TFEXFutureFields` (margin/expiry/direction) for Phase 7+ extension without touching `StrategyInfoSchema`; `NotFoundState` (`role="alert"`, icon + message) pulled forward from Phase 8.3 because `StrategyPage` needed it now; `StrategyPage` rewritten to look up `strategies?.find(s => s.id === id)`, show `LoadingState` while pending, `NotFoundState` for unknown id, otherwise render `<h1>` + `StrategyAdapterFactory`. Quality gate green: 139/139 tests across 22 files; 99.74 stmts / 94.94 branch / 98.18 funcs / 99.74 lines project-wide; **main bundle 334.99 KB JS / 100.61 KB gzip (+0.86 KB gzip vs Phase 5)**; Recharts chunks unchanged at ~118 KB gzip lazy. See [`phase_6_strategy_adapter_components.md`](./phase_6_strategy_adapter_components.md).
+- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses — does not block Phase 7 implementation, which is verified by MSW-mocked tests.
+- **Next step:** Phase 7 — Interactive Filter & Date Range. `useStrategyFilter` (URL-as-state via `useSearchParams`), `StrategySelector` (multi-select from `useStrategies()`), `DateRangePicker` (`<input type="date">` with `from ≤ to` validation), `FilterBar` (composer wrapping setters in `startTransition`).
 
 ---
 
