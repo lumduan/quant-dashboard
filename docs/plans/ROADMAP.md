@@ -903,5 +903,3 @@ Phase 1 (Project Bootstrap)
 - [`.claude/knowledge/stack-decisions.md`](../../.claude/knowledge/stack-decisions.md) — why `fetch`+Zod over `axios`; why Biome over ESLint+Prettier
 - [`.claude/knowledge/architecture.md`](../../.claude/knowledge/architecture.md) — folder structure + module boundaries (`api → hooks → components → pages`)
 - [`.claude/knowledge/coding-standards.md`](../../.claude/knowledge/coding-standards.md) — naming, file size budgets, error handling, accessibility
-- [`.claude/knowledge/commands.md`](../../.claude/knowledge/commands.md) — every `pnpm` / docker / git command you'll need
-- [`.claude/skills/vercel-react-best-practices/SKILL.md`](../../.claude/skills/vercel-react-best-practices/SKILL.md) — performance rule reference (parallel fetches, lazy chunks, `useDeferredValue`, `startTransition`)
