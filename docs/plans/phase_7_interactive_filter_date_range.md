@@ -573,4 +573,84 @@ pnpm dev
 
 ## Progress / Completion
 
-_Populated after the quality gate is green; see the bottom of this file._
+### Completion date
+
+2026-05-19.
+
+### Quality-gate output
+
+```
+pnpm lint           → Checked 63 files. No findings.
+pnpm format         → Checked 63 files. No fixes needed (after one format:fix round).
+pnpm typecheck      → (zero errors)
+pnpm test:coverage  → 172/172 tests passing across 26 files
+                      Coverage (project-wide):
+                        All files                                            99.8 stmts | 95.32 branch | 98.43 funcs | 99.8 lines
+                        src/hooks/useStrategyFilter.ts                        100 / 100   / 100 / 100
+                        src/components/filters/StrategySelector.tsx           100 / 94.73 / 100 / 100
+                        src/components/filters/DateRangePicker.tsx            100 / 100   / 100 / 100
+                        src/components/filters/FilterBar.tsx                  100 / 100   / 100 / 100
+                        src/pages/DashboardPage.tsx                           100 / 94.73 / 100 / 100
+pnpm build          → 775 modules transformed
+                      dist/index.html                                 0.68 KB (gzip 0.42 KB)
+                      dist/assets/index-*.css                        16.97 KB (gzip 4.17 KB)
+                      dist/assets/EquityCurveChart-*.js               1.29 KB (gzip 0.75 KB)
+                      dist/assets/MultiStrategyChart-*.js             9.17 KB (gzip 3.28 KB)
+                      dist/assets/DrawdownChart-*.js                 13.97 KB (gzip 5.14 KB)
+                      dist/assets/LineChart-*.js                     25.36 KB (gzip 7.73 KB)
+                      dist/assets/index-*.js                        343.48 KB (gzip 103.26 KB)
+                      dist/assets/CartesianChart-*.js               336.79 KB (gzip 101.50 KB)
+```
+
+### Bundle / chunk delta vs Phase 6
+
+| Bundle | Phase 6 | Phase 7 | Delta |
+|---|---|---|---|
+| Main JS (raw) | 334.99 KB | 343.48 KB | +8.49 KB |
+| Main JS (gzip) | **100.61 KB** | **103.26 KB** | **+2.65 KB** |
+| CSS (gzip) | 3.92 KB | 4.17 KB | +0.25 KB |
+| Recharts chunks (gzip) | ~118 KB | ~118 KB | unchanged (lazy) |
+
+The +2.65 KB main-bundle delta is the four new filter files (`useStrategyFilter` hook + `StrategySelector` + `DateRangePicker` + `FilterBar`) plus the `useQueries` wiring in `DashboardPage`. Recharts stays fully code-split.
+
+### Test count delta vs Phase 6
+
+| Phase | Test files | Tests |
+|---|---|---|
+| Phase 6 | 22 | 139 |
+| Phase 7 | 26 | 172 |
+| **Delta** | **+4** | **+33** |
+
+New test files: `useStrategyFilter.test.ts` (8), `StrategySelector.test.tsx` (9), `DateRangePicker.test.tsx` (8), `FilterBar.test.tsx` (3); the existing `DashboardPage.test.tsx` was extended (4 → 9 tests; the original "empty series → status message" test was rewritten because the new behavior shows all active strategies by default).
+
+### Acceptance criteria check
+
+- ✅ `useStrategyFilter` returns the documented shape with functional-updater setters.
+- ✅ `setSelectedIds(['a','b'])` → `?strategy=a&strategy=b`; `setSelectedIds([])` removes the key. Order preserved.
+- ✅ `setDateRange({...})` set + preserve-other-key semantics for `from` and `to` symmetric.
+- ✅ Refresh-as-remount restores state from URL.
+- ✅ `StrategySelector` checkbox-per-active-strategy with `(XX%)` badge; "All" / "Clear" buttons; pending skeleton; error returns `null`.
+- ✅ `DateRangePicker` two labelled date inputs; valid range fires `onChange`; invalid range shows `<p role="alert">` + suppresses `onChange`; defaults are recent.
+- ✅ `FilterBar` composes both sub-components; wraps setters in `startTransition` via `useCallback`-stable wrappers.
+- ✅ `DashboardPage` calls `useStrategyFilter()`; passes `from`/`to` to `usePortfolioEquityCurve`; uses `useQueries` for parallel per-strategy equity curves; renders `<FilterBar>` above `<PortfolioSummary>`.
+- ✅ Bookmarked URL restores both filters on first paint (verified by `route='/?strategy=csm-set-01'` test).
+- ✅ Quality gate fully green; main bundle 103.26 KB gzip (≤ 105 KB budget).
+- ✅ No `any`; no `console.log`; no hand-written domain interfaces.
+- ✅ Branch `feat/phase-7-filter-date-range` cut off `main`; commits follow Conventional Commits.
+
+### Deviations from the plan
+
+1. **`DateRangeInput` type widened to `from?: string | undefined`** rather than bare `from?: string`. Required by `exactOptionalPropertyTypes: true` so `setDateRange({ from: undefined })` is type-safe. Same fix Phase 2 applied to `PortfolioEquityCurveParams`; documented inline in `useStrategyFilter.ts`. Exported as a named type and reused by `DateRangePicker` and `FilterBar` so all three components agree on the contract.
+2. **`DashboardPage` test rewritten, not just extended.** The original "empty series → placeholder" test no longer holds because the new behavior treats "no selection" as "show all active." That test was replaced by two more accurate tests: (a) by default the chart renders all active strategies, no placeholder; (b) when there are zero active strategies (MSW override returns `[]`), the placeholder appears. The reload-restore, date-range, and multi-strategy paths are new tests on top.
+
+### Patterns established or reinforced (Phase 7)
+
+- **URL-as-state via `useSearchParams` + functional updater** — the only way to multi-set search params without stale-closure clobbering. Worth reusing for any future bookmarkable UI state.
+- **Single-subscription pattern for shared URL state** — call the hook once at the page level; pass values + setters down. Avoids re-render duplication when multiple components would otherwise subscribe to the same source.
+- **`startTransition` lives at the composer, not the source** — the hook is value-neutral; the composer makes the UX claim. Means callers without UX-urgency concerns (e.g. a CLI-like internal page) can use the same hook without paying transition latency.
+- **Local-draft + `<input type="date">` validation** — keep the input fully controlled by local state, only propagate via `onChange` when the value passes validation. Avoids the "snap-back" jarring effect that pure-controlled inputs cause when the parent rejects a value. No `useEffect` sync needed because Phase 7 has no external URL-change source.
+- **`useQueries` cache-key alignment with single-fetch hook** — using `['equity-curve', 'strategy', id]` in both `useQueries` and `useStrategyEquityCurve` lets TanStack Query dedupe automatically. The strategy-detail page (Phase 6) and the dashboard chart share one cache entry per strategy.
+
+### Time spent
+
+~35 minutes end-to-end (plan, implementation, one format round, one type-fix round for `exactOptionalPropertyTypes`).
