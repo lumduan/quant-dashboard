@@ -10,6 +10,7 @@ const unknownTypeStrategy: StrategyInfo = {
   id: 'csm-set-01',
   name: 'Mystery Strategy',
   type: 'UNKNOWN_TYPE',
+  service_url: 'http://localhost',
   capital_weight: 0.25,
   active: true,
 };

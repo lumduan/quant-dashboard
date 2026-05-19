@@ -17,6 +17,6 @@ const ADAPTER_MAP: Readonly<Record<string, ComponentType<StrategyAdapterProps>>>
 };
 
 export function StrategyAdapterFactory({ strategy }: StrategyAdapterProps): JSX.Element {
-  const Adapter = ADAPTER_MAP[strategy.type] ?? DefaultAdapter;
+  const Adapter = ADAPTER_MAP[strategy.type ?? ''] ?? DefaultAdapter;
   return <Adapter strategy={strategy} />;
 }

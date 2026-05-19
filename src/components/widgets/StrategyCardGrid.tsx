@@ -28,9 +28,11 @@ function StrategyCard({ strategy, performance, onSelect }: StrategyCardProps): J
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold text-gray-900">{strategy.name}</p>
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-          {strategy.type}
-        </span>
+        {strategy.type && (
+          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+            {strategy.type}
+          </span>
+        )}
       </div>
       <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
         <div>

@@ -34,6 +34,7 @@ function buildStrategy(overrides: Partial<StrategyInfo>): StrategyInfo {
     id: 'csm-set-01',
     name: 'Synthetic Strategy',
     type: 'EQUITY_MOMENTUM',
+    service_url: 'http://localhost',
     capital_weight: 0.5,
     active: true,
     ...overrides,

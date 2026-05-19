@@ -7,6 +7,7 @@ const tfexStrategy: StrategyInfo = {
   id: 'tfex-set-01',
   name: 'TFEX Futures Pilot',
   type: 'TFEX_FUTURES',
+  service_url: 'http://localhost',
   capital_weight: 0.15,
   active: true,
 };
