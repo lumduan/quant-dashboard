@@ -1,16 +1,27 @@
-import type { JSX } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { type JSX, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { StrategyAdapterFactory } from '@/components/strategy/StrategyAdapterFactory';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { NotFoundState } from '@/components/ui/NotFoundState';
 import { useStrategies } from '@/hooks/useGateway';
 
 export function StrategyPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
-  const { data: strategies, isPending } = useStrategies();
+  const queryClient = useQueryClient();
+  const { data: strategies, isPending, isError } = useStrategies();
+
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['strategies'] });
+  }, [queryClient]);
 
   if (isPending) {
     return <LoadingState message="Loading strategy…" />;
+  }
+
+  if (isError) {
+    return <ErrorState message="Failed to load strategies" onRetry={handleRetry} />;
   }
 
   const strategy = strategies?.find((s) => s.id === id);

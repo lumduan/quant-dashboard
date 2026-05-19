@@ -1,8 +1,11 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { StrategyPage } from '@/pages/StrategyPage';
+import { fixtures } from '@/test/mocks/handlers';
+import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/render';
 
 // StrategyPage → StrategyAdapterFactory → CSMSetAdapter → EquityCurveChart, which
@@ -54,7 +57,37 @@ describe('StrategyPage', () => {
 
   it('renders NotFoundState when the id is not in the strategies list', async () => {
     renderAt('/strategy/unknown-id');
+    const main = await screen.findByRole('main');
+    expect(main).toHaveTextContent('Strategy not found: unknown-id');
+    expect(screen.getByRole('link', { name: /back to dashboard/i })).toHaveAttribute('href', '/');
+  });
+
+  it('renders ErrorState with a Retry button when the strategies query fails', async () => {
+    server.use(http.get('/api/v1/strategies', () => HttpResponse.json(null, { status: 500 })));
+    renderAt('/strategy/csm-set-01');
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Strategy not found: unknown-id');
+    expect(alert).toHaveTextContent(/failed to load strategies/i);
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('re-fetches the strategies query when Retry is clicked', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('/api/v1/strategies', () => {
+        requestCount += 1;
+        return requestCount === 1
+          ? HttpResponse.json(null, { status: 500 })
+          : HttpResponse.json(fixtures.strategies);
+      }),
+    );
+    renderAt('/strategy/csm-set-01');
+    const retry = await screen.findByRole('button', { name: 'Retry' });
+    fireEvent.click(retry);
+    await waitFor(() => {
+      expect(requestCount).toBeGreaterThanOrEqual(2);
+    });
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'CSM-SET Equity Momentum' }),
+    ).toBeInTheDocument();
   });
 });

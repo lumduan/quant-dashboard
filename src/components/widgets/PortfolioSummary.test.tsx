@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { PortfolioSummary } from '@/components/widgets/PortfolioSummary';
@@ -42,12 +42,34 @@ describe('PortfolioSummary', () => {
     expect(drawdown).toHaveClass('text-red-400');
   });
 
-  it('renders an inline alert when the query fails', async () => {
+  it('renders an ErrorState alert when the query fails', async () => {
     server.use(
       http.get('/api/v1/overall-performance', () => HttpResponse.json(null, { status: 500 })),
     );
     renderWithProviders(<PortfolioSummary />);
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/failed to load portfolio summary/i);
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('re-fetches the query when the ErrorState Retry button is clicked', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('/api/v1/overall-performance', () => {
+        requestCount += 1;
+        return requestCount === 1
+          ? HttpResponse.json(null, { status: 500 })
+          : HttpResponse.json(fixtures.overall);
+      }),
+    );
+    renderWithProviders(<PortfolioSummary />);
+    const retry = await screen.findByRole('button', { name: 'Retry' });
+    fireEvent.click(retry);
+    await waitFor(() => {
+      expect(requestCount).toBeGreaterThanOrEqual(2);
+    });
+    expect(
+      await screen.findByText(formatTHB(fixtures.overall.total_portfolio_value)),
+    ).toBeInTheDocument();
   });
 });
