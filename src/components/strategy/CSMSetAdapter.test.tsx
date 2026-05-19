@@ -32,6 +32,7 @@ const csmSetStrategy: StrategyInfo = {
   id: 'csm-set-01',
   name: 'CSM-SET Equity Momentum',
   type: 'EQUITY_MOMENTUM',
+  service_url: 'http://localhost',
   capital_weight: 0.6,
   active: true,
 };

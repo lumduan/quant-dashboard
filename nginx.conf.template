@@ -43,20 +43,13 @@ server {
     add_header Expires "0" always;
   }
 
-  # API gateway reverse proxy — quant-network DNS resolves to the
-  # container name set in quant-api-gateway/docker-compose.yml.
-  # The `resolver` + variable `proxy_pass` defers upstream lookup to
-  # request time (Docker's embedded DNS at 127.0.0.11). Without this,
-  # Nginx resolves the upstream at config-parse time and the dashboard
-  # container refuses to start whenever the gateway isn't already up.
+  # API gateway reverse proxy — upstream configured via API_UPSTREAM env var.
   location /api/ {
-    resolver           127.0.0.11 valid=10s ipv6=off;
     proxy_set_header   Host              $host;
     proxy_set_header   X-Real-IP         $remote_addr;
     proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     proxy_read_timeout 30s;
-    set                $upstream_gateway http://quant-api-gateway:8000;
-    proxy_pass         $upstream_gateway;
+    proxy_pass         ${API_UPSTREAM};
   }
 
   # Healthcheck endpoint — consumed by Dockerfile HEALTHCHECK and the

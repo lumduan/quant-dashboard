@@ -22,7 +22,8 @@ export function DefaultAdapter({ strategy }: DefaultAdapterProps): JSX.Element {
   return (
     <section aria-label={`${strategy.name} adapter (default)`} className="space-y-6">
       <output className="block rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-        Strategy type "{strategy.type}" has no adapter — falling back to generic metrics.
+        Strategy type "{strategy.type ?? '(unknown)'}" has no adapter — falling back to generic
+        metrics.
       </output>
       {isPending ? (
         <output

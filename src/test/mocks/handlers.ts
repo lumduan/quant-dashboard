@@ -33,6 +33,7 @@ const strategies: StrategyInfo[] = [
     id: 'csm-set-01',
     name: 'CSM-SET Equity Momentum',
     type: 'EQUITY_MOMENTUM',
+    service_url: 'http://csm-set:8080',
     capital_weight: 0.6,
     active: true,
   },
@@ -64,10 +65,13 @@ function buildEquityCurve(): EquityPoint[] {
 const equityCurve: EquityPoint[] = buildEquityCurve();
 
 const snapshot: PortfolioSnapshot = {
-  date: '2026-05-18',
-  total_value: 10_000_000,
-  weighted_return: 0.0123,
+  snapshot_date: '2026-05-18',
+  total_portfolio_value: 10_000_000,
+  weighted_daily_return: 0.0123,
+  combined_drawdown: null,
+  active_strategies: 1,
   allocation: { 'csm-set-01': 0.6, cash: 0.4 },
+  computed_at: isoNow,
 };
 
 export const fixtures = {
