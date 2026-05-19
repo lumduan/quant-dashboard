@@ -1,0 +1,45 @@
+# Dashboard service for the quant trading system.
+#
+# Standalone bring-up:
+#   docker network create quant-network 2>/dev/null || true   # owned by quant-infra-db
+#   docker compose up -d dashboard
+#
+# `depends_on: api-gateway` below is forward-compatible with a future umbrella
+# Compose file that includes both services. When this compose runs standalone
+# from quant-dashboard/, the `api-gateway` service is not in this file and
+# Docker Compose silently skips the dependency check — the dashboard still
+# starts and reports `healthy` via its own /healthz endpoint, but /api/*
+# requests return 502 until quant-api-gateway is running on quant-network.
+
+services:
+  dashboard:
+    # Context is `.` because this compose file lives inside quant-dashboard/.
+    # When this service definition is merged into a future umbrella compose
+    # file at the trading-system root, change context to `./quant-dashboard`.
+    build:
+      context: .
+    container_name: quant-dashboard
+    restart: always
+    ports:
+      - "3000:80"
+    # depends_on for `api-gateway` is intentionally commented out: this
+    # compose file lives inside quant-dashboard/ and does not declare the
+    # api-gateway service, so Docker Compose rejects the reference as
+    # `undefined service`. When this service is merged into an umbrella
+    # compose file that also declares `api-gateway` (matching the service
+    # name from quant-api-gateway/docker-compose.yml), uncomment:
+    #
+    # depends_on:
+    #   api-gateway:
+    #     condition: service_healthy
+    networks:
+      - quant-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  quant-network:
+    external: true

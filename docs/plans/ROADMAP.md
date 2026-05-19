@@ -680,17 +680,19 @@ Already in `nginx.conf`:
 
 Remaining:
 
-- `[ ]` Add `/api/` proxy_pass to the Gateway:
+- `[x]` Add `/api/` proxy_pass to the Gateway — done 2026-05-19. Uses the `resolver 127.0.0.11` + variable `proxy_pass` pattern (deferred upstream resolution) so the dashboard container starts even when the gateway isn't yet on `quant-network`:
   ```nginx
   location /api/ {
-      proxy_pass         http://quant-api-gateway:8000;
+      resolver           127.0.0.11 valid=10s ipv6=off;
       proxy_set_header   Host              $host;
       proxy_set_header   X-Real-IP         $remote_addr;
       proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
       proxy_read_timeout 30s;
+      set                $upstream_gateway http://quant-api-gateway:8000;
+      proxy_pass         $upstream_gateway;
   }
   ```
-- `[ ]` Add `/healthz` route:
+- `[x]` Add `/healthz` route — done 2026-05-19:
   ```nginx
   location = /healthz {
       access_log off;
@@ -699,7 +701,7 @@ Remaining:
   }
   ```
 
-**Acceptance criteria:** Nginx proxies `/api/` to `quant-api-gateway:8000`; `/healthz` returns 200; SPA routing still works.
+**Acceptance criteria:** Nginx proxies `/api/` to `quant-api-gateway:8000`; `/healthz` returns 200; SPA routing still works. ✅ done 2026-05-19.
 
 #### 9.2 Dockerfile
 
@@ -711,29 +713,29 @@ Already done:
 
 Remaining:
 
-- `[ ]` After 9.1 lands, point `HEALTHCHECK` at `/healthz` (currently `wget -qO- http://localhost/`):
+- `[x]` After 9.1 lands, point `HEALTHCHECK` at `/healthz` — done 2026-05-19:
   ```dockerfile
   HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD wget -qO- http://localhost/healthz || exit 1
   ```
 
-**Acceptance criteria:** `docker build -t quant-dashboard .` succeeds; final image < 50 MB.
+**Acceptance criteria:** `docker build -t quant-dashboard .` succeeds; final image < 50 MB. ✅ done 2026-05-19 — real single-arch image is **21.86 MB** (multi-arch manifest sum reports 81.6 MB; use `docker image inspect ... --format '{{.Size}}'` for the true number).
 
 #### 9.3 Docker Compose Integration
 
-- `[ ]` Add a `dashboard` service to the trading-system umbrella `docker-compose.yml` (or create one in this repo's root if the umbrella file is elsewhere):
+- `[x]` Add a `dashboard` service to the trading-system compose. **No umbrella file exists** at `/Users/sarat/Code/quant-trading-system/` (each sibling project owns its own compose), so per the fallback the new compose lives at `quant-dashboard/docker-compose.yml` — done 2026-05-19. `build.context: .` (because the compose file is inside the project), `depends_on: api-gateway` commented out (cross-compose reference is invalid YAML standalone — re-enable when merged into an umbrella file):
   ```yaml
   services:
     dashboard:
       build:
-        context: ./quant-dashboard
+        context: .              # change to ./quant-dashboard in an umbrella compose
       container_name: quant-dashboard
       restart: always
       ports:
         - "3000:80"
-      depends_on:
-        api-gateway:
-          condition: service_healthy
+      # depends_on:
+      #   api-gateway:
+      #     condition: service_healthy
       networks:
         - quant-network
       healthcheck:
@@ -746,9 +748,10 @@ Remaining:
     quant-network:
       external: true
   ```
-- `[ ]` Verify: `docker compose up -d dashboard` → status `healthy`; `http://localhost:3000` → dashboard renders live Gateway data through the Nginx proxy.
+- `[x]` Verify standalone: `docker run -d --rm -p 3001:80 quant-dashboard` → `/healthz` returns `ok`, SPA fallback intact, container HEALTHCHECK reports `healthy`, `/api/v1/*` returns 502 (correct — no upstream Gateway yet) — done 2026-05-19.
+- `[-]` Verify live: `docker compose up -d dashboard` → status `healthy`; `http://localhost:3000` → dashboard renders Gateway data through the Nginx proxy — **deferred** until `quant-api-gateway` Phase 6 ships and the gateway is running on `quant-network`.
 
-**Acceptance criteria:** Dashboard runs on `quant-network`; all `/api/*` calls route via Nginx to `quant-api-gateway:8000`.
+**Acceptance criteria:** Dashboard runs on `quant-network`; all `/api/*` calls route via Nginx to `quant-api-gateway:8000`. ✅ **Phase 9 complete 2026-05-19 — see [`phase_9_docker_nginx.md`](./phase_9_docker_nginx.md).** Live end-to-end Gateway verification deferred until `quant-api-gateway` Phase 6 ships.
 
 ---
 
@@ -857,23 +860,23 @@ Phase 1 (Project Bootstrap)
 
 > `docker compose up -d dashboard` from a fresh clone → everything ready with no additional configuration.
 
-- [ ] `docker compose ps` shows `quant-dashboard` status `healthy`.
-- [ ] `http://localhost:3000` → Portfolio Summary displays all Gateway fields.
-- [ ] Equity Curve chart renders; hover tooltip shows correct values.
-- [ ] Sidebar auto-generates the strategy menu from `GET /api/v1/strategies`.
-- [ ] Filter bar: changing strategy / date range updates charts in realtime and writes to URL search params.
-- [ ] `/strategy/csm-set-01` → `CSMSetAdapter` shows that strategy's equity curve.
-- [ ] `pnpm typecheck` passes with no errors.
-- [ ] `pnpm test:coverage` passes with ≥80% on lines / functions / branches / statements.
-- [ ] `pnpm quality` (lint + format + typecheck + test:coverage) passes.
-- [ ] `pnpm build` produces `dist/` successfully; **main bundle < 250 KB gzipped**, **Recharts in a separate lazy chunk**.
-- [ ] No `console.log` in committed code; no `any` outside justified `// biome-ignore` lines; every external response validated by a Zod schema.
+- [-] `docker compose ps` shows `quant-dashboard` status `healthy` — **deferred (live)**. Standalone `docker run` confirms `healthy` ✅; live compose with the Gateway needs `quant-api-gateway` Phase 6.
+- [-] `http://localhost:3000` → Portfolio Summary displays all Gateway fields — **deferred (live)** until `quant-api-gateway` Phase 6.
+- [-] Equity Curve chart renders; hover tooltip shows correct values — **deferred (live)**. Verified against MSW fixtures (118 chart tests).
+- [-] Sidebar auto-generates the strategy menu from `GET /api/v1/strategies` — **deferred (live)**. Verified against MSW fixtures (Sidebar test suite).
+- [-] Filter bar: changing strategy / date range updates charts in realtime and writes to URL search params — **deferred (live)**. Verified against MSW fixtures (Phase 7 tests).
+- [-] `/strategy/csm-set-01` → `CSMSetAdapter` shows that strategy's equity curve — **deferred (live)**. Verified against MSW fixtures (StrategyPage + CSMSetAdapter tests).
+- [x] `pnpm typecheck` passes with no errors — Phase 1–9.
+- [x] `pnpm test:coverage` passes with ≥80% on lines / functions / branches / statements — 195/195 tests; 98.93 stmts / 95.87 branch / 98.63 funcs / 98.93 lines project-wide (Phase 8 / 9).
+- [x] `pnpm quality` (lint + format + typecheck + test:coverage) passes — Phase 1–9.
+- [x] `pnpm build` produces `dist/` successfully; **main bundle < 250 KB gzipped**, **Recharts in a separate lazy chunk** — 104.16 KB gzip main, Recharts in `CartesianChart-*.js` lazy chunk (~101 KB gzip).
+- [x] No `console.log` in committed code; no `any` outside justified `// biome-ignore` lines; every external response validated by a Zod schema — Hard Rules enforced via Biome + reviewed across Phase 1–9.
 
 ---
 
 ## Current Status
 
-- **Current phase:** Phase 9 — Docker Integration & Nginx.
+- **Current phase:** All planned phases complete. Project is feature-complete pending live Gateway verification.
 - **Completed:**
   - Generic scaffold — Vite 6, React 19, TypeScript 5 strict, Biome 1.9, Vitest 3, Husky + lint-staged, Docker multi-stage, Nginx with SPA fallback + security headers, GitHub Actions CI / docker-publish / security-audit, `.claude/` knowledge base, Zod, `pnpm@9.15.0` pinned via Corepack.
   - **Phase 1 — Project Bootstrap (2026-05-18):** [`phase_1_bootstrap.md`](./phase_1_bootstrap.md)
@@ -884,8 +887,9 @@ Phase 1 (Project Bootstrap)
   - **Phase 6 — Strategy Adapter Components (2026-05-19):** 139 tests; build 100.61 KB gzip. [`phase_6_strategy_adapter_components.md`](./phase_6_strategy_adapter_components.md)
   - **Phase 7 — Interactive Filter & Date Range (2026-05-19):** 172 tests; build 103.26 KB gzip. [`phase_7_interactive_filter_date_range.md`](./phase_7_interactive_filter_date_range.md). `useStrategyFilter` (URL-as-state via `useSearchParams` + functional updater), `StrategySelector` (checkbox list from `useStrategies()`), `DateRangePicker` (`<input type="date">` ×2 with `from ≤ to` validation + local-draft pattern), `FilterBar` (composer wrapping setters in `startTransition`), `DashboardPage` wired with `useQueries` for parallel per-strategy equity curves → `MultiStrategyChart` `series`.
   - **Phase 8 — Dashboard & Strategy Pages (2026-05-19):** 195 tests; build 104.16 KB gzip. [`phase_8_dashboard_strategy_pages.md`](./phase_8_dashboard_strategy_pages.md). `ErrorBoundary` (class-based, `fallbackRender({ error, resetErrorBoundary })` + `onReset?`), `ErrorState` (`role="alert"` + optional Retry), `NotFoundState` upgraded to `<main>` + `<Link to="/">Back to Dashboard</Link>`, `StrategyCardGrid` (navigate-on-click cards with `StrategyCard` named subcomponent), `PortfolioSummary` error path swapped for `ErrorState` + retry-on-`invalidateQueries`, `DashboardPage` complete assembly with one `<Suspense>` + `<ErrorBoundary>` per section and page-level `useDeferredValue(series)`, `StrategyPage` adds `isError` branch with `<ErrorState>` retry.
-- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses.
-- **Next step:** Phase 9 — Docker Integration & Nginx. Add `/api/` proxy_pass + `/healthz` to `nginx.conf`; point Dockerfile `HEALTHCHECK` at `/healthz`; add a `dashboard` service to the trading-system `docker-compose.yml` on `quant-network`.
+  - **Phase 9 — Docker Integration & Nginx (2026-05-19):** 195 tests (unchanged — infra only); build 104.16 KB gzip (unchanged); Docker image 21.86 MB real size (multi-arch manifest sum reports 81.6 MB). [`phase_9_docker_nginx.md`](./phase_9_docker_nginx.md). `nginx.conf` adds `/api/` proxy with the `resolver 127.0.0.11` + variable `proxy_pass` pattern (defers upstream resolution to request time so the dashboard starts even when the gateway isn't yet on `quant-network`) and an exact-match `/healthz` returning 200 `ok`; Dockerfile HEALTHCHECK targets `/healthz`; new `docker-compose.yml` at the project root (no umbrella exists) with `build.context: .`, port `3000:80`, `quant-network` external, and the cross-compose `depends_on: api-gateway` commented out (re-enable when merged into an umbrella compose).
+- **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before live end-to-end Gateway verification.
+- **Next step:** All planned phases complete. Remaining work is live end-to-end verification against `quant-api-gateway` once its Phase 6 ships — bring up `quant-infra-db` (owns `quant-network`), then `quant-api-gateway`, then `docker compose up -d dashboard`; confirm `docker compose ps` reports `quant-dashboard` `healthy` and `http://localhost:3000` renders live Gateway data through the Nginx proxy.
 
 ---
 
