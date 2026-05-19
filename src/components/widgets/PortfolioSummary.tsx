@@ -1,4 +1,6 @@
-import { useMemo, type JSX } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, type JSX } from 'react';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { MetricCard } from '@/components/widgets/MetricCard';
 import { useOverallPerformance } from '@/hooks/useGateway';
 import { formatPercent, formatTHB, trendColor } from '@/utils/formatters';
@@ -6,7 +8,11 @@ import { formatPercent, formatTHB, trendColor } from '@/utils/formatters';
 const GRID_CLASS = 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4';
 
 export function PortfolioSummary(): JSX.Element {
+  const queryClient = useQueryClient();
   const { data, isPending, isError } = useOverallPerformance();
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['overall-performance'] });
+  }, [queryClient]);
 
   const portfolioValue = useMemo(
     () => formatTHB(data?.total_portfolio_value ?? 0),
@@ -49,14 +55,7 @@ export function PortfolioSummary(): JSX.Element {
   }
 
   if (isError || !data) {
-    return (
-      <p
-        role="alert"
-        className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-      >
-        Failed to load portfolio summary.
-      </p>
-    );
+    return <ErrorState message="Failed to load portfolio summary." onRetry={handleRetry} />;
   }
 
   return (

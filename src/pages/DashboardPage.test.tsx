@@ -1,7 +1,8 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { fixtures } from '@/test/mocks/handlers';
 import { server } from '@/test/mocks/server';
 import { renderWithProviders } from '@/test/render';
 
@@ -95,5 +96,47 @@ describe('DashboardPage', () => {
     expect(checkboxes).toHaveLength(2);
     expect(checkboxes[0]).toHaveAccessibleName(/CSM-SET Equity Momentum/);
     expect(checkboxes[1]).toHaveAccessibleName(/TFEX Futures Alpha/);
+  });
+
+  it('renders StrategyCardGrid cards from the active strategies', async () => {
+    renderWithProviders(<DashboardPage />);
+    const cardSection = await screen.findByRole('region', { name: 'Strategy cards' });
+    const cards = within(cardSection).getAllByRole('button');
+    expect(cards).toHaveLength(1);
+    expect(cards[0]).toHaveAccessibleName(/CSM-SET Equity Momentum/);
+  });
+
+  it('shows the ErrorState with Retry when the overall-performance query fails', async () => {
+    server.use(
+      http.get('/api/v1/overall-performance', () => HttpResponse.json(null, { status: 500 })),
+    );
+    renderWithProviders(<DashboardPage />);
+    const alerts = await screen.findAllByRole('alert');
+    const portfolioAlert = alerts.find((a) =>
+      /failed to load portfolio summary/i.test(a.textContent ?? ''),
+    );
+    expect(portfolioAlert).toBeDefined();
+    expect(
+      within(portfolioAlert as HTMLElement).getByRole('button', { name: 'Retry' }),
+    ).toBeInTheDocument();
+  });
+
+  it('re-fetches overall-performance when the ErrorState Retry is clicked', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get('/api/v1/overall-performance', () => {
+        requestCount += 1;
+        return requestCount === 1
+          ? HttpResponse.json(null, { status: 500 })
+          : HttpResponse.json(fixtures.overall);
+      }),
+    );
+    renderWithProviders(<DashboardPage />);
+    const retry = await screen.findByRole('button', { name: 'Retry' });
+    fireEvent.click(retry);
+    await waitFor(() => {
+      expect(requestCount).toBeGreaterThanOrEqual(2);
+    });
+    expect(await screen.findByRole('region', { name: 'Portfolio summary' })).toBeInTheDocument();
   });
 });
