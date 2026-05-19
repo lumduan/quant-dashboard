@@ -469,4 +469,84 @@ docker stop qd-test
 
 ## Progress / Completion
 
-*(To be filled in after implementation: completion date, image size, test count (195 expected), pnpm/docker smoke output, deviations, deferred items — specifically live Gateway end-to-end.)*
+### Completion date
+
+2026-05-19.
+
+### Quality-gate output
+
+```
+pnpm quality        → 195/195 tests passing across 29 files
+                      Coverage (project-wide):
+                        All files                            98.93 stmts | 95.87 branch | 98.63 funcs | 98.93 lines
+                        (unchanged from Phase 8 — no src/ edits)
+pnpm build          → 778 modules transformed
+                      dist/index.html                                 0.68 KB (gzip 0.42 KB)
+                      dist/assets/index-*.css                        17.94 KB (gzip 4.29 KB)
+                      dist/assets/EquityCurveChart-*.js               1.29 KB (gzip 0.75 KB)
+                      dist/assets/MultiStrategyChart-*.js             9.17 KB (gzip 3.28 KB)
+                      dist/assets/DrawdownChart-*.js                 13.97 KB (gzip 5.14 KB)
+                      dist/assets/LineChart-*.js                     25.36 KB (gzip 7.73 KB)
+                      dist/assets/CartesianChart-*.js               336.79 KB (gzip 101.50 KB)
+                      dist/assets/index-*.js                        347.45 KB (gzip 104.16 KB)
+                      (identical to Phase 8 baseline)
+docker build        → success; tag quant-dashboard:latest
+docker images       → 81.6 MB (multi-arch manifest sum, misleading)
+docker image inspect → 21.86 MB (real single-arch size; arm64/linux)
+docker compose config → parses cleanly; dashboard service surfaces
+```
+
+### Standalone runtime smoke
+
+```
+docker run -d --rm -p 3001:80 --name qd-smoke quant-dashboard
+curl /healthz                       → "ok"
+HEAD /                              → HTTP/1.1 200, Content-Type: text/html
+GET /strategy/csm-set-01            → 200 (SPA fallback intact)
+GET /api/v1/overall-performance     → 502 (correct — no upstream Gateway)
+HEALTHCHECK status after 32s        → "healthy", FailingStreak: 0, two consecutive "ok" probes
+```
+
+### Acceptance criteria check
+
+- ✅ `nginx.conf` proxies `/api/` to `http://quant-api-gateway:8000` with `Host` / `X-Real-IP` / `X-Forwarded-For` headers + `proxy_read_timeout 30s` (using the resolver + variable pattern — see Deviation #2).
+- ✅ `nginx.conf` exposes `/healthz` returning HTTP 200 body `ok`, `Content-Type: text/plain`, `access_log off`.
+- ✅ Existing SPA fallback, security headers, gzip, `/assets/` cache, `/index.html` no-cache, `server_tokens off` retained.
+- ✅ `Dockerfile` `HEALTHCHECK` CMD targets `/healthz`; interval / timeout / retries preserved.
+- ✅ `docker-compose.yml` exists at project root with the `dashboard` service (commented-out `depends_on` — see Deviation #3).
+- ✅ `pnpm typecheck` zero errors.
+- ✅ `pnpm lint` zero findings.
+- ✅ `pnpm format` no drift.
+- ✅ `pnpm test:coverage` — 195/195 tests; coverage unchanged from Phase 8.
+- ✅ `pnpm build` succeeds; main bundle 104.16 KB gzip (identical to Phase 8).
+- ✅ `docker build -t quant-dashboard .` succeeds; **real image 21.86 MB** (well under 50 MB).
+- ✅ `docker compose config` parses cleanly after the cross-compose `depends_on` was commented out.
+- ✅ Standalone smoke: `/healthz` returns `ok`; SPA shell on `/`; SPA fallback on deep route; `/api/` returns 502 (expected — no upstream); container HEALTHCHECK reports `healthy`.
+- ⏳ **Deferred** — live `docker compose up -d dashboard` against a running `quant-api-gateway`: blocked until `quant-api-gateway` Phase 6 ships. The path is documented in §Verification plan.
+- ✅ ROADMAP.md Phase 9 boxes ticked; Current Status / Next step updated; Overall Exit Criteria ticked for Docker / Nginx items (with deferred-verification caveats).
+
+### Deviations from the plan
+
+1. **`docker-compose.yml` `build.context: .` instead of `./quant-dashboard`.** The prompt's literal YAML assumes an umbrella compose file at `/Users/sarat/Code/quant-trading-system/`. No such file exists; sibling projects each own their compose file (verified). Per the prompt's explicit fallback ("Locate or create the appropriate docker-compose.yml [at] the project root"), the new file lives at `quant-dashboard/docker-compose.yml` — and the build context relative to that location is `.`, not `./quant-dashboard`. A header comment in the file documents how to flip this when merging into a future umbrella compose.
+
+2. **`nginx.conf` `/api/` block uses `resolver 127.0.0.11` + variable `proxy_pass`, not a literal hostname.** The first build started but the container crashed with `host not found in upstream "quant-api-gateway" in /etc/nginx/conf.d/default.conf:49`. Nginx resolves literal hostnames in `proxy_pass` at config-parse time (startup) — when the gateway isn't already on `quant-network`, the dashboard refuses to start. The production-correct fix is to defer resolution to request time via Docker's embedded DNS (`127.0.0.11`) + a `set $upstream_gateway http://quant-api-gateway:8000;` + `proxy_pass $upstream_gateway;`. This:
+   - Lets the dashboard come up before / during gateway rollouts (essential for rolling deploys).
+   - Preserves the literal upstream URL / hostname / port as a string value.
+   - Makes the §Risks entry "DNS resolution fails — Independent of Nginx healthcheck" actually true (it wasn't before this fix).
+   - Adds 2 lines to nginx.conf, all inside Phase 9 scope.
+
+3. **`depends_on: api-gateway: condition: service_healthy` commented out, not removed.** First `docker compose config` rejected the file: `service "dashboard" depends on undefined service "api-gateway": invalid compose project`. Per the prompt's "use `api-gateway` as specified and add a comment noting it must match" — and per user confirmation via AskUserQuestion mid-implementation — the depends_on block is commented out with explicit instructions for re-enabling it when the dashboard service is merged into an umbrella compose file alongside `api-gateway`. The smoke test confirms cross-compose `depends_on` is a no-op anyway — Nginx `/healthz` is the dashboard's own healthcheck.
+
+4. **No new `.claude/knowledge/*` entries.** The `resolver` + variable `proxy_pass` pattern is genuinely reusable (any service-mesh Nginx fronting a containerized backend on a shared Docker network needs it), but `.claude/knowledge/` is React/TypeScript-focused; adding a Docker-only pattern would create a new content category. Logged here in §Progress instead; can be promoted to a dedicated `infra-patterns.md` later if other services need to repeat the pattern.
+
+### Patterns established or reinforced (Phase 9)
+
+- **Nginx `resolver` + `proxy_pass $variable` for service-mesh upstreams.** Always required when the upstream is a container name on a user-defined Docker network. Without it, the proxy container fails to start whenever the upstream isn't already up — fatal for rolling deploys and standalone smoke tests.
+- **Multi-arch image sizes are misleading in `docker images`.** On Apple Silicon with default buildkit, `docker images <name>` reports the **sum** of all platform variants + attestation manifests (in our case ~81.6 MB). The actually-deployed single-arch size is given by `docker image inspect <name> --format '{{.Size}}'` (here: 21.86 MB). Use the latter for size-budget verification.
+- **Cross-compose `depends_on` is invalid YAML in standalone files.** Compose validates references at parse time, even though `depends_on` semantics would be a no-op anyway. Either keep the reference inside an umbrella file or comment it out.
+- **`location = /healthz` is the correct exact-match form** for Docker HEALTHCHECK targets — it has the highest Nginx location precedence and never bleeds into SPA fallback or asset caching.
+- **`access_log off;` on `/healthz`** prevents probe-flood pollution in production logs (one probe / 30s × N days = thousands of identical entries otherwise).
+
+### Time spent
+
+~30 minutes end-to-end (plan validation, three rounds of compose / Nginx fixes for the standalone-vs-umbrella mismatch, smoke test, docs).
