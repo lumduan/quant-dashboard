@@ -38,11 +38,30 @@ const strategies: StrategyInfo[] = [
   },
 ];
 
-const equityCurve: EquityPoint[] = [
-  { date: '2026-01-01', value: 100 },
-  { date: '2026-02-01', value: 103.5 },
-  { date: '2026-03-01', value: 101.2 },
-];
+// 30 deterministic daily points from 2026-04-19 to 2026-05-18 starting at 1,000,000.
+// Closed-form daily return = drift + sinusoidal swing + a deliberate mid-period dip
+// produces a curve with at least one meaningful drawdown for the DrawdownChart test fixtures.
+function buildEquityCurve(): EquityPoint[] {
+  const points: EquityPoint[] = [];
+  const startDate = new Date('2026-04-19T00:00:00.000Z');
+  let value = 1_000_000;
+  for (let i = 0; i < 30; i++) {
+    if (i > 0) {
+      const drift = 0.003;
+      const swing = 0.012 * Math.sin((i / 30) * 2 * Math.PI);
+      const dip = i >= 11 && i <= 15 ? -0.012 : 0;
+      const dailyReturn = drift + swing + dip;
+      value = value * (1 + dailyReturn);
+    }
+    const date = new Date(startDate);
+    date.setUTCDate(date.getUTCDate() + i);
+    const isoDate = date.toISOString().slice(0, 10);
+    points.push({ date: isoDate, value: Math.round(value) });
+  }
+  return points;
+}
+
+const equityCurve: EquityPoint[] = buildEquityCurve();
 
 const snapshot: PortfolioSnapshot = {
   date: '2026-05-18',
