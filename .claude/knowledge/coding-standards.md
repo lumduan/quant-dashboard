@@ -109,6 +109,8 @@ if (!parsed.success) {
 return { ok: true, value: parsed.data };
 ```
 
+- **`ErrorBoundary` is the render-time safety net; TanStack Query errors don't reach it.** `useQuery` swallows fetch failures into `isError`/`error`. To make a failure recoverable from the UI, render `<ErrorState>` from inside the consuming component and wire the Retry callback to `queryClient.invalidateQueries({ queryKey: [...] })`. Wrap async sections in `<ErrorBoundary fallbackRender={({ error, resetErrorBoundary }) => ...}>` *additionally* for render-time crashes (malformed data, chart-library throws). Phase 8 example: `PortfolioSummary` (query error → inline `ErrorState`) and `DashboardPage` (each `<Suspense>` section wrapped in an `ErrorBoundary` whose fallback invalidates the relevant cache key then calls `resetErrorBoundary()`).
+
 ---
 
 ## Tests

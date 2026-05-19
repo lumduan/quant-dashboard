@@ -600,53 +600,68 @@ This is where Vercel `bundle-dynamic-imports` matters most. All chart components
 
 #### 8.1 DashboardPage
 
-- `[ ]` Create `src/pages/DashboardPage.tsx`:
+- `[x]` Create `src/pages/DashboardPage.tsx` — done 2026-05-19:
   - Hooks: `useOverallPerformance()`, `usePortfolioEquityCurve()`, `useStrategyFilter()`. TanStack Query runs these **in parallel** when called at the same level (Vercel `async-parallel`).
-  - Layout: `FilterBar → PortfolioSummary → (EquityCurveChart | DrawdownChart) 2-col → AllocationBar → StrategyCardGrid`.
+  - Layout: `FilterBar → PortfolioSummary → (EquityCurveChart | DrawdownChart) 2-col → AllocationBar → StrategyCardGrid → MultiStrategyChart`.
   - Each async section wrapped in `<Suspense fallback={<LoadingState />}>` (Vercel `async-suspense-boundaries`).
-  - Errors wrapped in `<ErrorBoundary fallback={<ErrorState />}>`.
-- `[ ]` Create `src/components/widgets/StrategyCardGrid.tsx`:
-  - One card per strategy: name, daily PnL (colored by sign), Max DD, Sharpe.
+  - Errors wrapped in `<ErrorBoundary fallbackRender={...}>` (custom class-based boundary, not the upstream `react-error-boundary` package).
+  - `useDeferredValue(series)` on the chart prop (Vercel `rerender-use-deferred-value`).
+- `[x]` Create `src/components/widgets/StrategyCardGrid.tsx` — done 2026-05-19:
+  - One card per strategy: name, type badge, Daily PnL (colored by sign via `trendColor`), Max DD (`formatPercent`), Sharpe Ratio.
   - Click → `navigate('/strategy/' + id)` via `useNavigate`.
+  - `StrategyCard` extracted as a module-scope named subcomponent (Vercel `rerender-no-inline-components`).
 
-**Acceptance criteria:** Dashboard loads, filter works, card-grid navigates to the detail page.
+**Acceptance criteria:** Dashboard loads, filter works, card-grid navigates to the detail page. ✅ done 2026-05-19.
 
 #### 8.2 StrategyPage
 
-- `[ ]` Create `src/pages/StrategyPage.tsx`:
+- `[x]` Create `src/pages/StrategyPage.tsx` — done 2026-05-19. Adds an `isError` branch beyond the ROADMAP snippet that renders `<ErrorState onRetry={() => queryClient.invalidateQueries({ queryKey: ['strategies'] })} />` so retry is possible when the strategies query fails:
   ```typescript
+  import { useQueryClient } from '@tanstack/react-query'
   import { useParams } from 'react-router-dom'
   import { StrategyAdapterFactory } from '@/components/strategy/StrategyAdapterFactory'
+  import { ErrorState } from '@/components/ui/ErrorState'
+  import { LoadingState } from '@/components/ui/LoadingState'
   import { NotFoundState } from '@/components/ui/NotFoundState'
   import { useStrategies } from '@/hooks/useGateway'
 
-  export default function StrategyPage(): JSX.Element {
+  export function StrategyPage(): JSX.Element {
     const { id } = useParams<{ id: string }>()
-    const { data: strategies } = useStrategies()
-    const strategy = strategies?.find((s) => s.id === id)
+    const queryClient = useQueryClient()
+    const { data: strategies, isPending, isError } = useStrategies()
 
-    if (!strategy) return <NotFoundState message={`Strategy not found: ${id}`} />
+    if (isPending) return <LoadingState message="Loading strategy…" />
+    if (isError) return (
+      <ErrorState
+        message="Failed to load strategies"
+        onRetry={() => queryClient.invalidateQueries({ queryKey: ['strategies'] })}
+      />
+    )
+
+    const strategy = strategies?.find((s) => s.id === id)
+    if (!strategy) return <NotFoundState message={`Strategy not found: ${id ?? '(no id)'}`} />
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         <h1 className="text-xl font-bold">{strategy.name}</h1>
         <StrategyAdapterFactory strategy={strategy} />
       </div>
     )
   }
   ```
-- `[ ]` Verify: `/strategy/csm-set-01` → `CSMSetAdapter`; `/strategy/unknown-id` → `NotFoundState`.
+- `[x]` Verify: `/strategy/csm-set-01` → `CSMSetAdapter`; `/strategy/unknown-id` → `NotFoundState` with "Back to Dashboard" link — done 2026-05-19.
 
-**Acceptance criteria:** Page renders the correct adapter for the strategy type.
+**Acceptance criteria:** Page renders the correct adapter for the strategy type. ✅ done 2026-05-19.
 
 #### 8.3 UI States
 
 - `[x]` Create `src/components/ui/LoadingState.tsx` — skeleton that matches real content layout (not a generic spinner) — shipped in Phase 3 (2026-05-18) as the AppLayout Suspense fallback.
-- `[ ]` Create `src/components/ui/ErrorState.tsx` — error icon + message + Retry button (calls `QueryClient.invalidateQueries` for the failed key).
-- `[ ]` Create `src/components/ui/NotFoundState.tsx` — shown when a strategy id is not in the registry.
-- `[ ]` Tests use `getByRole` / `getByText` per [coding-standards.md §Accessibility](../../.claude/knowledge/coding-standards.md).
+- `[x]` Create `src/components/ui/ErrorState.tsx` — done 2026-05-19. Pure presentation (`role="alert"` + icon + message + optional Retry button); callers own `queryClient.invalidateQueries`.
+- `[x]` Create `src/components/ui/ErrorBoundary.tsx` — done 2026-05-19. Minimal class-based boundary with `fallbackRender({ error, resetErrorBoundary })` + `onReset?` (mirrors the upstream `react-error-boundary` API; no new dep).
+- `[x]` Create `src/components/ui/NotFoundState.tsx` — already existed; upgraded 2026-05-19 to a `<main>` landmark + `<Link to="/">Back to Dashboard</Link>` (react-router-dom). Three pre-existing tests + one new back-link assertion.
+- `[x]` Tests use `getByRole` / `getByText` per [coding-standards.md §Accessibility](../../.claude/knowledge/coding-standards.md) — done 2026-05-19.
 
-**Acceptance criteria:** Loading / Error / NotFound display correctly in their respective scenarios.
+**Acceptance criteria:** Loading / Error / NotFound display correctly in their respective scenarios. ✅ done 2026-05-19.
 
 ---
 
@@ -858,7 +873,7 @@ Phase 1 (Project Bootstrap)
 
 ## Current Status
 
-- **Current phase:** Phase 8 — Dashboard & Strategy Pages.
+- **Current phase:** Phase 9 — Docker Integration & Nginx.
 - **Completed:**
   - Generic scaffold — Vite 6, React 19, TypeScript 5 strict, Biome 1.9, Vitest 3, Husky + lint-staged, Docker multi-stage, Nginx with SPA fallback + security headers, GitHub Actions CI / docker-publish / security-audit, `.claude/` knowledge base, Zod, `pnpm@9.15.0` pinned via Corepack.
   - **Phase 1 — Project Bootstrap (2026-05-18):** [`phase_1_bootstrap.md`](./phase_1_bootstrap.md)
@@ -868,8 +883,9 @@ Phase 1 (Project Bootstrap)
   - **Phase 5 — Equity Curve Charts (2026-05-18):** 118 tests; build 99.75 KB gzip; Recharts lazy chunks ~118 KB gzip. [`phase_5_equity_curve_charts.md`](./phase_5_equity_curve_charts.md)
   - **Phase 6 — Strategy Adapter Components (2026-05-19):** 139 tests; build 100.61 KB gzip. [`phase_6_strategy_adapter_components.md`](./phase_6_strategy_adapter_components.md)
   - **Phase 7 — Interactive Filter & Date Range (2026-05-19):** 172 tests; build 103.26 KB gzip. [`phase_7_interactive_filter_date_range.md`](./phase_7_interactive_filter_date_range.md). `useStrategyFilter` (URL-as-state via `useSearchParams` + functional updater), `StrategySelector` (checkbox list from `useStrategies()`), `DateRangePicker` (`<input type="date">` ×2 with `from ≤ to` validation + local-draft pattern), `FilterBar` (composer wrapping setters in `startTransition`), `DashboardPage` wired with `useQueries` for parallel per-strategy equity curves → `MultiStrategyChart` `series`.
+  - **Phase 8 — Dashboard & Strategy Pages (2026-05-19):** 195 tests; build 104.16 KB gzip. [`phase_8_dashboard_strategy_pages.md`](./phase_8_dashboard_strategy_pages.md). `ErrorBoundary` (class-based, `fallbackRender({ error, resetErrorBoundary })` + `onReset?`), `ErrorState` (`role="alert"` + optional Retry), `NotFoundState` upgraded to `<main>` + `<Link to="/">Back to Dashboard</Link>`, `StrategyCardGrid` (navigate-on-click cards with `StrategyCard` named subcomponent), `PortfolioSummary` error path swapped for `ErrorState` + retry-on-`invalidateQueries`, `DashboardPage` complete assembly with one `<Suspense>` + `<ErrorBoundary>` per section and page-level `useDeferredValue(series)`, `StrategyPage` adds `isError` branch with `<ErrorState>` retry.
 - **Blocked by:** `quant-api-gateway` Phase 6 (11 REST endpoints) must be live before any phase can be verified end-to-end against real Gateway responses.
-- **Next step:** Phase 8 — Dashboard & Strategy Pages. `StrategyCardGrid`, `ErrorState`, `ErrorBoundary` on `DashboardPage` and `StrategyPage`.
+- **Next step:** Phase 9 — Docker Integration & Nginx. Add `/api/` proxy_pass + `/healthz` to `nginx.conf`; point Dockerfile `HEALTHCHECK` at `/healthz`; add a `dashboard` service to the trading-system `docker-compose.yml` on `quant-network`.
 
 ---
 

@@ -544,3 +544,98 @@ pnpm dev
 > - [ ] Every component defined at module scope (never inside another component)
 > - [ ] Every external response validated by a Zod schema via `safeParse`
 > - [ ] All props interfaces use `readonly` modifiers
+
+---
+
+## Progress / Completion
+
+### Completion date
+
+2026-05-19.
+
+### Quality-gate output
+
+```
+pnpm typecheck      → zero errors
+pnpm lint           → Checked 69 files. No findings.
+pnpm format         → Checked 69 files (after one format:fix round to merge a long import + collapse a few line breaks).
+pnpm test:coverage  → 195/195 tests passing across 29 files
+                      Coverage (project-wide):
+                        All files                                            98.93 stmts | 95.89 branch | 98.63 funcs | 98.93 lines
+                        src/components/ui/ErrorBoundary.tsx                    100 / 100 / 100 / 100
+                        src/components/ui/ErrorState.tsx                       100 / 100 / 100 / 100
+                        src/components/ui/NotFoundState.tsx                    100 / 100 / 100 / 100
+                        src/components/widgets/StrategyCardGrid.tsx            100 / 100 / 100 / 100
+                        src/components/widgets/PortfolioSummary.tsx            100 / 100 / 100 / 100
+                        src/pages/DashboardPage.tsx                          92.56 / 96.77 / 100 / 92.56
+                        src/pages/StrategyPage.tsx                            100 /  90  / 100 / 100
+pnpm build          → 778 modules transformed
+                      dist/index.html                                 0.68 KB (gzip 0.42 KB)
+                      dist/assets/index-*.css                        17.91 KB (gzip 4.28 KB)
+                      dist/assets/EquityCurveChart-*.js               1.29 KB (gzip 0.75 KB)
+                      dist/assets/MultiStrategyChart-*.js             9.17 KB (gzip 3.28 KB)
+                      dist/assets/DrawdownChart-*.js                 13.97 KB (gzip 5.14 KB)
+                      dist/assets/LineChart-*.js                     25.36 KB (gzip 7.73 KB)
+                      dist/assets/CartesianChart-*.js               336.79 KB (gzip 101.50 KB)
+                      dist/assets/index-*.js                        347.45 KB (gzip 104.16 KB)
+```
+
+### Bundle / chunk delta vs Phase 7
+
+| Bundle | Phase 7 | Phase 8 | Delta |
+|---|---|---|---|
+| Main JS (raw) | 343.48 KB | 347.45 KB | +3.97 KB |
+| Main JS (gzip) | **103.26 KB** | **104.16 KB** | **+0.90 KB** |
+| CSS (gzip) | 4.17 KB | 4.28 KB | +0.11 KB |
+| Recharts chunks (gzip) | ~118 KB | ~118 KB | unchanged (lazy) |
+
+The +0.90 KB gzip main-bundle delta covers the four new files (`ErrorBoundary` + `ErrorState` + `StrategyCardGrid` + the DashboardPage wiring) plus the PortfolioSummary refactor. Well inside the +6.74 KB budget.
+
+### Test count delta vs Phase 7
+
+| Phase | Test files | Tests |
+|---|---|---|
+| Phase 7 | 26 | 172 |
+| Phase 8 | 29 | 195 |
+| **Delta** | **+3** | **+23** |
+
+New test files: `ErrorBoundary.test.tsx` (4), `ErrorState.test.tsx` (5), `StrategyCardGrid.test.tsx` (7). The existing `NotFoundState.test.tsx` was rewritten (3 → 4 tests after switching to `getByRole('main')` + adding the back-link href assertion). `PortfolioSummary.test.tsx` (5 → 6) gained a Retry round-trip test. `StrategyPage.test.tsx` (3 → 5) gained an error/retry round-trip plus the back-link assertion. `DashboardPage.test.tsx` (9 → 12) gained StrategyCardGrid rendering, error-state-on-500, and retry-click coverage.
+
+### Acceptance criteria check
+
+- ✅ `ErrorBoundary` catches render-time throws; `fallbackRender({ error, resetErrorBoundary })`; reset clears state; `onReset?` fires.
+- ✅ `ErrorState` renders `role="alert"` + message + Retry only when `onRetry` provided.
+- ✅ `NotFoundState` is a `<main>` landmark with `<Link to="/">Back to Dashboard</Link>` (href `/`).
+- ✅ `StrategyCardGrid` renders cards with name, type badge, formatted Daily PnL + trend colour, Max DD, Sharpe. Click navigates. Empty array → `<output>` status.
+- ✅ `StrategyCard` defined at module scope in the same file (no inline component definitions).
+- ✅ `DashboardPage` layout `FilterBar → PortfolioSummary → (EquityCurve | Drawdown) → AllocationBar → StrategyCardGrid → MultiStrategyChart`; each async section wrapped in `<Suspense>` + `<ErrorBoundary>`.
+- ✅ `useDeferredValue(series)` applied at the page level.
+- ✅ `PortfolioSummary` `isError` → `<ErrorState>` invalidates `['overall-performance']` on retry.
+- ✅ `StrategyPage` `isError` → `<ErrorState>` invalidates `['strategies']` on retry.
+- ✅ `pnpm typecheck` zero errors.
+- ✅ `pnpm lint` zero findings.
+- ✅ `pnpm format` clean (after one format:fix round).
+- ✅ `pnpm test:coverage` — 195/195 tests; coverage well above 80 % everywhere.
+- ✅ `pnpm build` — main bundle 104.16 KB gzip (≤ 110 KB budget; ≪ 250 KB ceiling).
+- ✅ Recharts chunks remain lazy at ~118 KB combined gzip.
+- ✅ No `any`; no `console.log`; no hand-written domain interfaces; all props `readonly`.
+
+### Deviations from the plan
+
+1. **`NotFoundState` uses `<main>` without an explicit `role="main"` attribute.** Biome's `lint/a11y/noRedundantRoles` flagged the explicit role as redundant because `<main>` already implies the `main` ARIA role. The semantic outcome — and the `getByRole('main')` test query — is identical. Documented inline at the file.
+2. **`StrategyCardGrid` empty state uses `<output>` instead of `<p role="status">`.** Biome's `lint/a11y/useSemanticElements` mandated this swap (same idiom as `LoadingState` and `Sidebar`). The `getByRole('status')` assertion still passes because `<output>` carries an implicit `status` role.
+3. **PortfolioSummary's error path now requires `useCallback` + `useQueryClient`.** Phase 4 didn't have either; both are needed once the retry path is invokable. Justified in §Architecture decisions (TanStack Query swallows errors into `isError`).
+4. **DashboardPage exposes five fallback closures (one per section) via a `makeFallback(message, onRetry)` helper.** Avoided duplicating the fallback JSX five times; each closure is memoised against its specific `invalidateXxx` callback so React doesn't see prop churn on re-render.
+
+### Patterns established or reinforced (Phase 8)
+
+- **`ErrorBoundary` with `fallbackRender` + `onReset?` shape mirroring `react-error-boundary`** — keeps a future swap mechanical while preserving the contract `useQueryClient()` callers expect.
+- **TanStack-Query-aware error UI lives inside the data-consuming component** — `ErrorBoundary` is the safety net for render-time crashes; query-level `isError` branches render `<ErrorState>` directly with `queryClient.invalidateQueries` wired to Retry. Worth noting in `coding-standards.md` if it isn't already.
+- **`makeFallback(message, onRetry)` factory at module scope** — avoids per-render closure churn while still letting each `<ErrorBoundary>` carry section-specific messaging + invalidation keys.
+- **`useDeferredValue` doubled (page level + chart level)** — idempotent; both placements communicate intent at the call site without breaking downstream re-renders.
+- **MSW per-test `server.use(...)` for 500 variants** — already canonical; Phase 8 added five new examples (PortfolioSummary, StrategyPage, DashboardPage) without touching `handlers.ts`.
+- **`<button>` cards driven by `useNavigate` + a memoised `onSelect(id)` at the grid level** — keeps cards stateless, single click handler memoised per id, and content semantic (dl/dt/dd) without nesting interactive elements.
+
+### Time spent
+
+~25 minutes end-to-end (plan validation, implementation, one format round, three lint fixes — `useSemanticElements`, `noRedundantRoles`, `noEmptyBlockStatements`).
