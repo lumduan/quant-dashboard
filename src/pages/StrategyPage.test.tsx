@@ -31,6 +31,14 @@ vi.mock('recharts', async (importOriginal) => {
   };
 });
 
+// TradeLogTable imports @tanstack/react-virtual
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: () => ({
+    getVirtualItems: () => [],
+    getTotalSize: () => 0,
+  }),
+}));
+
 function renderAt(route: string) {
   return renderWithProviders(
     <Routes>
@@ -88,6 +96,36 @@ describe('StrategyPage', () => {
     });
     expect(
       await screen.findByRole('heading', { level: 1, name: 'CSM-SET Equity Momentum' }),
+    ).toBeInTheDocument();
+  });
+
+  // Phase 4: tab switching tests
+
+  it('renders metrics tab content by default', async () => {
+    renderAt('/strategy/csm-set-01');
+    expect(
+      await screen.findByRole('region', { name: 'CSM-SET Equity Momentum adapter' }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders report tab when ?tab=report is set', async () => {
+    renderAt('/strategy/csm-set-01?tab=report');
+    expect(
+      await screen.findByRole('region', { name: /strategy performance headline/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders trades tab when ?tab=trades is set', async () => {
+    renderAt('/strategy/csm-set-01?tab=trades');
+    expect(await screen.findByRole('region', { name: /trade log/i })).toBeInTheDocument();
+  });
+
+  it('switches tabs when a tab button is clicked', async () => {
+    renderAt('/strategy/csm-set-01');
+    await screen.findByRole('region', { name: 'CSM-SET Equity Momentum adapter' });
+    fireEvent.click(screen.getByRole('tab', { name: 'Report' }));
+    expect(
+      await screen.findByRole('region', { name: /strategy performance headline/i }),
     ).toBeInTheDocument();
   });
 });

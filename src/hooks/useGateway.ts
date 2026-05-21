@@ -1,19 +1,26 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   fetchOverallPerformance,
   fetchPortfolioEquityCurve,
   fetchPortfolioSnapshot,
   fetchStrategies,
+  fetchStrategyBenchmarkCurve,
   fetchStrategyEquityCurve,
   fetchStrategyPerformance,
+  fetchStrategyReport,
+  fetchStrategyTrades,
 } from '@/api/queries';
 import type {
+  BenchmarkPoint,
   EquityPoint,
   OverallPerformance,
   PortfolioSnapshot,
   StrategyInfo,
   StrategyPerformance,
+  StrategyReportResponse,
+  TradeLogPage,
 } from '@/types/gateway';
+import type { BenchmarkCurveParams, StrategyTradesParams } from '@/api/queries';
 
 const FIVE_MINUTES = 5 * 60_000;
 const FOUR_AND_A_HALF_MINUTES = FIVE_MINUTES - 30_000;
@@ -69,5 +76,52 @@ export function usePortfolioSnapshot(date?: string): UseQueryResult<PortfolioSna
   return useQuery({
     queryKey: ['portfolio-snapshot', date ?? 'latest'],
     queryFn: () => fetchPortfolioSnapshot(date),
+  });
+}
+
+// ── Phase 4: Strategy Report hooks ────────────────────────────────────────
+
+const TEN_MINUTES = 10 * 60_000;
+
+export function useStrategyReport(
+  id: string,
+  date?: string,
+): UseQueryResult<StrategyReportResponse, Error> {
+  return useQuery({
+    queryKey: ['strategy-report', id, date],
+    queryFn: () => fetchStrategyReport(id, date),
+    enabled: Boolean(id),
+    staleTime: FOUR_AND_A_HALF_MINUTES,
+    gcTime: TEN_MINUTES,
+    retry: 1,
+  });
+}
+
+export function useStrategyTrades(
+  id: string,
+  params: StrategyTradesParams,
+): UseQueryResult<TradeLogPage, Error> {
+  return useQuery({
+    queryKey: ['strategy-trades', id, params],
+    queryFn: () => fetchStrategyTrades(id, params),
+    enabled: Boolean(id),
+    staleTime: FOUR_AND_A_HALF_MINUTES,
+    gcTime: TEN_MINUTES,
+    retry: 1,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useStrategyBenchmarkCurve(
+  id: string,
+  params: BenchmarkCurveParams,
+): UseQueryResult<BenchmarkPoint[], Error> {
+  return useQuery({
+    queryKey: ['strategy-benchmark-curve', id, params],
+    queryFn: () => fetchStrategyBenchmarkCurve(id, params),
+    enabled: Boolean(id),
+    staleTime: FOUR_AND_A_HALF_MINUTES,
+    gcTime: TEN_MINUTES,
+    retry: 1,
   });
 }

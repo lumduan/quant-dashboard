@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- feat(strategy): add TradingView-style report tabs with print support (Phase 4)
+  - StrategyReport Zod schemas (15 new schemas for full report tree)
+  - fetchStrategyReport, fetchStrategyTrades, fetchStrategyBenchmarkCurve queries
+  - useStrategyReport, useStrategyTrades, useStrategyBenchmarkCurve hooks
+  - StrategyTabs, ReportHeader, HeadlineKPIStrip, MetricTable, TradeLogTable, PrintButton
+  - ProfitStructureChart, BenchmarkRangeBar, PnLDistributionChart, WinLossDonut
+  - Extended EquityCurveChart with showBuyAndHold/showRunUpDrawdownShading/showPerBarPnLHistogram
+  - REPORT_COLORS dark theme palette + formatDateBKK formatter
+  - src/styles/print.css with @media print rules
+  - StrategyPage ?tab= deep-linking (metrics|report|trades)
+  - MSW fixtures + handlers for report, trades, benchmark-curve endpoints
+
 ## [0.1.0] - 2026-05-17
 
 ### Added
