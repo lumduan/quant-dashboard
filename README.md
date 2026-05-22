@@ -1,5 +1,17 @@
 # quant-dashboard
 
+> [!WARNING]
+> **DEPRECATED — effective 2026-05-22**
+>
+> This service is superseded by **[quant-openbb](https://github.com/lumduan/quant-openbb)**
+> as the primary UI layer for the quant trading system. All dashboard functionality
+> has a typed OpenBB equivalent (confirmed in Phase 3 of the OpenBB transition).
+> See the **[Migration from quant-dashboard](https://github.com/lumduan/quant-openbb#migration-from-quant-dashboard)**
+> guide in the quant-openbb README for a full feature-to-command mapping.
+>
+> **The container remains operational.** No breaking changes have been made.
+> No new features will be added.
+
 React 19 SPA for the quant trading system. Displays **Portfolio Performance**, **Equity Curves**, and **Strategy Details**, fed by [`quant-api-gateway`](https://github.com/lumduan/quant-api-gateway) over REST.
 
 > **Principle:** Gateway computes everything. Dashboard only receives JSON and renders it.
