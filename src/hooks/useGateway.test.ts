@@ -7,8 +7,11 @@ import {
   usePortfolioEquityCurve,
   usePortfolioSnapshot,
   useStrategies,
+  useStrategyBenchmarkCurve,
   useStrategyEquityCurve,
   useStrategyPerformance,
+  useStrategyReport,
+  useStrategyTrades,
 } from '@/hooks/useGateway';
 import { fixtures } from '@/test/mocks/handlers';
 
@@ -145,5 +148,102 @@ describe('usePortfolioSnapshot', () => {
       'portfolio-snapshot',
       '2026-05-18',
     ]);
+  });
+});
+
+// ── Phase 4: Strategy Report hooks ────────────────────────────────────────
+
+describe('useStrategyReport', () => {
+  it('uses the ["strategy-report", id, date] cache key', () => {
+    const { wrapper, client } = makeWrapper();
+    renderHook(() => useStrategyReport('csm-set-01', '2026-05-18'), { wrapper });
+    expect(client.getQueryCache().findAll()[0]?.queryKey).toEqual([
+      'strategy-report',
+      'csm-set-01',
+      '2026-05-18',
+    ]);
+  });
+
+  it('is disabled when id is empty', () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useStrategyReport(''), { wrapper });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it('resolves with the parsed Gateway payload end-to-end', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useStrategyReport('csm-set-01'), { wrapper });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data).toEqual(fixtures.strategyReportResponse);
+  });
+});
+
+describe('useStrategyTrades', () => {
+  it('uses the ["strategy-trades", id, params] cache key', () => {
+    const { wrapper, client } = makeWrapper();
+    const params = { limit: 50, offset: 0 };
+    renderHook(() => useStrategyTrades('csm-set-01', params), { wrapper });
+    expect(client.getQueryCache().findAll()[0]?.queryKey).toEqual([
+      'strategy-trades',
+      'csm-set-01',
+      params,
+    ]);
+  });
+
+  it('is disabled when id is empty', () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(
+      () => useStrategyTrades('', { limit: 100, offset: 0 }),
+      { wrapper },
+    );
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it('resolves with the parsed trades page end-to-end', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(
+      () => useStrategyTrades('csm-set-01', { limit: 100, offset: 0 }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data).toEqual(fixtures.tradeLogPage);
+  });
+});
+
+describe('useStrategyBenchmarkCurve', () => {
+  it('uses the ["strategy-benchmark-curve", id, params] cache key', () => {
+    const { wrapper, client } = makeWrapper();
+    const params = { normalize: true };
+    renderHook(() => useStrategyBenchmarkCurve('csm-set-01', params), { wrapper });
+    expect(client.getQueryCache().findAll()[0]?.queryKey).toEqual([
+      'strategy-benchmark-curve',
+      'csm-set-01',
+      params,
+    ]);
+  });
+
+  it('is disabled when id is empty', () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useStrategyBenchmarkCurve('', {}), { wrapper });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it('resolves with the parsed benchmark curve end-to-end', async () => {
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(
+      () => useStrategyBenchmarkCurve('csm-set-01', {}),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data).toEqual(fixtures.benchmarkCurve);
   });
 });

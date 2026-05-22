@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { StrategyPage } from '@/pages/StrategyPage';
 import '@/index.css';
+import '@/styles/print.css';
 
 const rootElement = document.getElementById('root');
 

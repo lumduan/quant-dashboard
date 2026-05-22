@@ -1,0 +1,15 @@
+@media print {
+  .no-print,
+  [data-no-print] {
+    display: none !important;
+  }
+
+  .report-section {
+    break-before: page;
+  }
+
+  body {
+    background: #131722 !important;
+    color: #b2b5be !important;
+  }
+}
