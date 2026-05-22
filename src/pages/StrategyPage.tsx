@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { type JSX, Suspense, useCallback, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { ProfitStructureChart } from '@/components/charts';
 import { StrategyAdapterFactory } from '@/components/strategy/StrategyAdapterFactory';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -8,6 +9,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { NotFoundState } from '@/components/ui/NotFoundState';
 import { HeadlineKPIStrip } from '@/components/widgets/HeadlineKPIStrip';
 import { ReportHeader } from '@/components/widgets/ReportHeader';
+import { ReturnsTable } from '@/components/widgets/ReturnsTable';
 import { TradeLogTable } from '@/components/widgets/TradeLogTable';
 import { useStrategies, useStrategyReport, useStrategyTrades } from '@/hooks/useGateway';
 
@@ -116,9 +118,11 @@ export function StrategyPage(): JSX.Element {
                       <h2 className="mb-3 text-sm font-semibold text-[#B2B5BE]">
                         Profit Structure
                       </h2>
+                      <ProfitStructureChart data={reportResponse.report.profit_structure} />
                     </section>
                     <section aria-label="Returns table">
                       <h2 className="mb-3 text-sm font-semibold text-[#B2B5BE]">Returns</h2>
+                      <ReturnsTable data={reportResponse.report.returns} />
                     </section>
                   </div>
                 </Suspense>

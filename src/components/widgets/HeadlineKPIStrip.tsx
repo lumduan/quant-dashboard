@@ -23,13 +23,13 @@ export function HeadlineKPIStrip({ headline }: HeadlineKPIStripProps): JSX.Eleme
         />
         <MetricCard
           label="Max Drawdown"
-          value={formatPercent(headline.max_drawdown_pct)}
-          colorClass={trendColor(headline.max_drawdown_pct)}
+          value={formatPercent(headline.max_equity_drawdown_pct)}
+          colorClass={trendColor(headline.max_equity_drawdown_pct)}
         />
         <MetricCard
           label="Profitable Trades"
           value={`${headline.profitable_trades}/${headline.total_trades}`}
-          subtitle={formatPercent(headline.profitable_trades_pct)}
+          subtitle={formatPercent(headline.profitable_pct)}
         />
         <MetricCard
           label="Profit Factor"

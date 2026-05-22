@@ -77,11 +77,11 @@ export const TradeLogPageSchema = z.object({
 export const HeadlineSchema = z.object({
   total_pnl: z.coerce.number(),
   total_pnl_pct: z.coerce.number(),
-  max_drawdown: z.coerce.number(),
-  max_drawdown_pct: z.coerce.number(),
+  max_equity_drawdown: z.coerce.number(),
+  max_equity_drawdown_pct: z.coerce.number(),
   total_trades: z.coerce.number().int(),
   profitable_trades: z.coerce.number().int(),
-  profitable_trades_pct: z.coerce.number(),
+  profitable_pct: z.coerce.number(),
   profit_factor: z.coerce.number(),
 });
 
@@ -169,10 +169,10 @@ export const DetailsSchema = z.object({
 });
 
 export const CapitalUsageRowSchema = z.object({
-  cagr: z.coerce.number(),
+  annualized_return_cagr: z.coerce.number(),
   return_on_initial_capital: z.coerce.number(),
   account_size_required: z.coerce.number(),
-  return_on_account_size: z.coerce.number(),
+  return_on_account_size_required: z.coerce.number(),
   net_profit_pct_of_largest_loss: z.coerce.number(),
 });
 
@@ -193,21 +193,19 @@ export const CapitalEfficiencySchema = z.object({
 });
 
 export const RunUpRowSchema = z.object({
-  avg_runup_duration: z.coerce.number(),
-  avg_runup_pct: z.coerce.number(),
-  max_runup: z.coerce.number(),
-  max_runup_pct: z.coerce.number(),
+  avg_duration_days: z.coerce.number(),
+  avg_runup: z.coerce.number(),
+  max_runup_close_to_close: z.coerce.number(),
   max_runup_intrabar: z.coerce.number().nullable(),
-  max_runup_intrabar_pct: z.coerce.number().nullable(),
+  max_runup_pct_initial_capital_intrabar: z.coerce.number().nullable(),
 });
 
 export const DrawdownRowSchema = z.object({
-  avg_drawdown_duration: z.coerce.number(),
-  avg_drawdown_pct: z.coerce.number(),
-  max_drawdown: z.coerce.number(),
-  max_drawdown_pct: z.coerce.number(),
+  avg_duration_days: z.coerce.number(),
+  avg_drawdown: z.coerce.number(),
+  max_drawdown_close_to_close: z.coerce.number(),
   max_drawdown_intrabar: z.coerce.number().nullable(),
-  max_drawdown_intrabar_pct: z.coerce.number().nullable(),
+  max_drawdown_pct_initial_capital_intrabar: z.coerce.number().nullable(),
   return_of_max_drawdown: z.coerce.number(),
 });
 
@@ -223,7 +221,7 @@ export const StrategyReportSchema = z.object({
   headline: HeadlineSchema,
   profit_structure: ProfitStructureSchema,
   returns: ReturnsSchema,
-  benchmark_comparison: BenchmarkComparisonSchema,
+  benchmark_comparison: BenchmarkComparisonSchema.nullable(),
   risk_adjusted: RiskAdjustedSchema,
   trades_analysis: TradesAnalysisSchema,
   details: DetailsSchema,

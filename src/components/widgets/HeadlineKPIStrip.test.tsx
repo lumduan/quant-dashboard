@@ -7,11 +7,11 @@ import type { Headline } from '@/types/gateway';
 const headline: Headline = {
   total_pnl: 25000,
   total_pnl_pct: 0.125,
-  max_drawdown: -15000,
-  max_drawdown_pct: -0.075,
+  max_equity_drawdown: -15000,
+  max_equity_drawdown_pct: -0.075,
   total_trades: 46,
   profitable_trades: 17,
-  profitable_trades_pct: 0.3696,
+  profitable_pct: 0.3696,
   profit_factor: 1.45,
 };
 
